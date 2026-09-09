@@ -73,6 +73,8 @@ class SectionQuestionPolicyTest extends TestCase
         $coach = User::factory()->coach()->create();
         $admin = User::factory()->admin()->create();
         $assignedCert = Certification::factory()->published()->create();
+        $otherCert = Certification::factory()->published()->create();
+
         CertificationCoachAssignment::create([
             'id' => (string) Str::ulid(),
             'certification_id' => $assignedCert->id,
@@ -80,6 +82,7 @@ class SectionQuestionPolicyTest extends TestCase
             'assigned_by_user_id' => $admin->id,
             'assigned_at' => now(),
         ]);
+
         $assignedQuestion = SectionQuestion::factory()->published()->create([
             'section_id' => Section::factory()->state(fn () => [
                 'chapter_id' => Chapter::factory()
@@ -87,8 +90,36 @@ class SectionQuestionPolicyTest extends TestCase
                     ->create()->id,
             ]),
         ]);
+
+        $otherQuestion = SectionQuestion::factory()->published()->create([
+            'section_id' => Section::factory()->state(fn () => [
+                'chapter_id' => Chapter::factory()
+                    ->for(Part::factory()->for($otherCert))
+                    ->create()->id,
+            ]),
+        ]);
+
         $policy = new SectionQuestionPolicy;
 
+        $this->assertTrue($policy->viewAny($coach, $assignedQuestion->section));
+        $this->assertFalse($policy->viewAny($coach, $otherQuestion->section));
+
+        $this->assertTrue($policy->view($coach, $assignedQuestion));
+        $this->assertFalse($policy->view($coach, $otherQuestion));
+
+        $this->assertTrue($policy->create($coach, $assignedQuestion->section));
+        $this->assertFalse($policy->create($coach, $otherQuestion->section));
+
         $this->assertTrue($policy->update($coach, $assignedQuestion));
+        $this->assertFalse($policy->update($coach, $otherQuestion));
+
+        $this->assertTrue($policy->delete($coach, $assignedQuestion));
+        $this->assertFalse($policy->delete($coach, $otherQuestion));
+
+        $this->assertTrue($policy->publish($coach, $assignedQuestion));
+        $this->assertFalse($policy->publish($coach, $otherQuestion));
+
+        $this->assertTrue($policy->unpublish($coach, $assignedQuestion));
+        $this->assertFalse($policy->unpublish($coach, $otherQuestion));
     }
 }

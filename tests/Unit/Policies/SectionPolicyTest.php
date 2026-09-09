@@ -51,11 +51,13 @@ class SectionPolicyTest extends TestCase
         $this->assertFalse($policy->view($student, $sectionUnderDraftPart), '親階層に draft があれば閲覧不可');
     }
 
-    public function test_coach_can_manage_assigned_certification(): void
+    public function test_coach_can_manage_only_assigned_certification(): void
     {
         $coach = User::factory()->coach()->create();
         $admin = User::factory()->admin()->create();
         $assignedCert = Certification::factory()->published()->create();
+        $otherCert = Certification::factory()->published()->create();
+
         CertificationCoachAssignment::create([
             'id' => (string) Str::ulid(),
             'certification_id' => $assignedCert->id,
@@ -63,12 +65,44 @@ class SectionPolicyTest extends TestCase
             'assigned_by_user_id' => $admin->id,
             'assigned_at' => now(),
         ]);
-        $part = Part::factory()->for($assignedCert)->published()->create();
-        $chapter = Chapter::factory()->for($part)->published()->create();
-        $section = Section::factory()->for($chapter)->published()->create();
+
+        $assignedPart = Part::factory()->for($assignedCert)->published()->create();
+        $assignedChapter = Chapter::factory()->for($assignedPart)->published()->create();
+        $assignedSection = Section::factory()->for($assignedChapter)->published()->create();
+        $assignedDraftSection = Section::factory()->for($assignedChapter)->draft()->create();
+
+        $otherPart = Part::factory()->for($otherCert)->published()->create();
+        $otherChapter = Chapter::factory()->for($otherPart)->published()->create();
+        $otherSection = Section::factory()->for($otherChapter)->published()->create();
+
         $policy = new SectionPolicy;
 
-        $this->assertTrue($policy->update($coach, $section));
-        $this->assertTrue($policy->preview($coach, $section));
+        $this->assertTrue($policy->viewAny($coach, $assignedChapter));
+        $this->assertFalse($policy->viewAny($coach, $otherChapter));
+
+        $this->assertTrue($policy->view($coach, $assignedSection));
+        $this->assertTrue($policy->view($coach, $assignedDraftSection));
+        $this->assertFalse($policy->view($coach, $otherSection));
+
+        $this->assertTrue($policy->create($coach, $assignedChapter));
+        $this->assertFalse($policy->create($coach, $otherChapter));
+
+        $this->assertTrue($policy->update($coach, $assignedSection));
+        $this->assertFalse($policy->update($coach, $otherSection));
+
+        $this->assertTrue($policy->delete($coach, $assignedSection));
+        $this->assertFalse($policy->delete($coach, $otherSection));
+
+        $this->assertTrue($policy->publish($coach, $assignedSection));
+        $this->assertFalse($policy->publish($coach, $otherSection));
+
+        $this->assertTrue($policy->unpublish($coach, $assignedSection));
+        $this->assertFalse($policy->unpublish($coach, $otherSection));
+
+        $this->assertTrue($policy->reorder($coach, $assignedChapter));
+        $this->assertFalse($policy->reorder($coach, $otherChapter));
+
+        $this->assertTrue($policy->preview($coach, $assignedSection));
+        $this->assertFalse($policy->preview($coach, $otherSection));
     }
 }
