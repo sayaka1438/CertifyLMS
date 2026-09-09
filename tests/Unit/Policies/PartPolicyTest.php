@@ -51,8 +51,29 @@ class PartPolicyTest extends TestCase
         $otherPart = Part::factory()->for($otherCert)->published()->create();
         $policy = new PartPolicy;
 
+        $this->assertTrue($policy->viewAny($coach, $assignedCert));
+        $this->assertFalse($policy->viewAny($coach, $otherCert));
+
+        $this->assertTrue($policy->view($coach, $assignedPart));
+        $this->assertFalse($policy->view($coach, $otherPart));
+
+        $this->assertTrue($policy->create($coach, $assignedCert));
+        $this->assertFalse($policy->create($coach, $otherCert));
+
         $this->assertTrue($policy->update($coach, $assignedPart));
         $this->assertFalse($policy->update($coach, $otherPart));
+
+        $this->assertTrue($policy->delete($coach, $assignedPart));
+        $this->assertFalse($policy->delete($coach, $otherPart));
+
+        $this->assertTrue($policy->publish($coach, $assignedPart));
+        $this->assertFalse($policy->publish($coach, $otherPart));
+
+        $this->assertTrue($policy->unpublish($coach, $assignedPart));
+        $this->assertFalse($policy->unpublish($coach, $otherPart));
+
+        $this->assertTrue($policy->reorder($coach, $assignedCert));
+        $this->assertFalse($policy->reorder($coach, $otherCert));
     }
 
     public function test_student_view_published_only(): void
