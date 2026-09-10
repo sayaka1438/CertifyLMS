@@ -316,4 +316,32 @@ class MeetingControllerTest extends TestCase
             'amount' => 1,
         ]);
     }
+
+    public function test_cancel_by_coach_refunds_quota_to_student(): void
+    {
+        $student = User::factory()->student()->inProgress()->create(['max_meetings' => 5]);
+        $coach = User::factory()->coach()->create();
+        $meeting = Meeting::factory()->reserved()->forCoach($coach)->forStudent($student)->create([
+            'scheduled_at' => now()->addDays(3)->startOfHour(),
+        ]);
+
+        $response = $this->actingAs($coach)->post(route('meetings.cancel', $meeting));
+
+        $response->assertRedirect();
+        $this->assertSame(
+            MeetingStatus::Canceled,
+            $meeting->fresh()->status
+        );
+        $this->assertDatabaseHas('meeting_quota_transactions', [
+            'user_id' => $student->id,
+            'related_meeting_id' => $meeting->id,
+            'type' => MeetingQuotaTransactionType::Refunded->value,
+            'amount' => 1,
+        ]);
+        $this->assertDatabaseMissing('meeting_quota_transactions', [
+            'user_id' => $coach->id,
+            'related_meeting_id' => $meeting->id,
+            'type' => MeetingQuotaTransactionType::Refunded->value,
+        ]);
+    }
 }
