@@ -85,6 +85,20 @@ class IndexTest extends TestCase
         $response->assertSee('Published One');
         $response->assertDontSee('Draft One');
         $response->assertDontSee('Archived One');
+
+        $response = $this->actingAs($admin)->get(route('admin.certifications.index', ['status' => 'draft']));
+
+        $response->assertOk();
+        $response->assertSee('Draft One');
+        $response->assertDontSee('Published One');
+        $response->assertDontSee('Archived One');
+
+        $response = $this->actingAs($admin)->get(route('admin.certifications.index', ['status' => 'archived']));
+
+        $response->assertOk();
+        $response->assertSee('Archived One');
+        $response->assertDontSee('Published One');
+        $response->assertDontSee('Draft One');
     }
 
     public function test_category_filter(): void
