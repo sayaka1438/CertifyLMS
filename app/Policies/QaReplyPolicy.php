@@ -12,45 +12,45 @@ use App\Models\User;
 
 class QaReplyPolicy
 {
-    public function create(User $user, QaThread $qaThread): bool
+    public function create(User $user, QaThread $thread): bool
     {
-        $qaThread->loadMissing('certification.coaches');
+        $thread->loadMissing('certification.coaches');
 
         return match ($user->role) {
-            UserRole::Student => $qaThread->certification->status === CertificationStatus::Published,
-            UserRole::Coach => $qaThread->certification->status === CertificationStatus::Published && $qaThread->certification->coaches->contains('id', $user->id),
+            UserRole::Student => $thread->certification->status === CertificationStatus::Published,
+            UserRole::Coach => $thread->certification->status === CertificationStatus::Published && $thread->certification->coaches->contains('id', $user->id),
             default => false,
         };
     }
 
-    public function update(User $user, QaReply $qaReply): bool
+    public function update(User $user, QaReply $reply): bool
     {
-        $qaReply->loadMissing('thread.certification.coaches');
+        $reply->loadMissing('thread.certification.coaches');
 
         return match ($user->role) {
-            UserRole::Student => $qaReply->user_id === $user->id
-                && $qaReply->thread->certification->status === CertificationStatus::Published,
-            UserRole::Coach => $qaReply->user_id === $user->id
-                && $qaReply->thread->certification->status === CertificationStatus::Published
-                && $qaReply->thread->certification->coaches->contains('id', $user->id),
+            UserRole::Student => $reply->user_id === $user->id
+                && $reply->thread->certification->status === CertificationStatus::Published,
+            UserRole::Coach => $reply->user_id === $user->id
+                && $reply->thread->certification->status === CertificationStatus::Published
+                && $reply->thread->certification->coaches->contains('id', $user->id),
             default => false,
         };
     }
 
-    public function delete(User $user, QaReply $qaReply): bool
+    public function delete(User $user, QaReply $reply): bool
     {
         if ($user->role === UserRole::Admin) {
             return true;
         }
 
-        $qaReply->loadMissing('thread.certification.coaches');
+        $reply->loadMissing('thread.certification.coaches');
 
         return match ($user->role) {
-            UserRole::Student => $qaReply->user_id === $user->id
-                && $qaReply->thread->certification->status === CertificationStatus::Published,
-            UserRole::Coach => $qaReply->user_id === $user->id
-                && $qaReply->thread->certification->status === CertificationStatus::Published
-                && $qaReply->thread->certification->coaches->contains('id', $user->id),
+            UserRole::Student => $reply->user_id === $user->id
+                && $reply->thread->certification->status === CertificationStatus::Published,
+            UserRole::Coach => $reply->user_id === $user->id
+                && $reply->thread->certification->status === CertificationStatus::Published
+                && $reply->thread->certification->coaches->contains('id', $user->id),
             default => false,
         };
     }

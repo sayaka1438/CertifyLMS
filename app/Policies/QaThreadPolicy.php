@@ -21,14 +21,14 @@ class QaThreadPolicy
         );
     }
 
-    public function view(User $user, QaThread $qaThread): bool
+    public function view(User $user, QaThread $thread): bool
     {
-        $qaThread->loadMissing('certification.coaches');
+        $thread->loadMissing('certification.coaches');
 
         return match ($user->role) {
             UserRole::Admin => true,
-            UserRole::Student => $qaThread->certification->status === CertificationStatus::Published,
-            UserRole::Coach => $qaThread->certification->status === CertificationStatus::Published && $qaThread->certification->coaches->contains('id', $user->id),
+            UserRole::Student => $thread->certification->status === CertificationStatus::Published,
+            UserRole::Coach => $thread->certification->status === CertificationStatus::Published && $thread->certification->coaches->contains('id', $user->id),
             default => false,
         };
     }
@@ -38,46 +38,46 @@ class QaThreadPolicy
         return $user->role === UserRole::Student;
     }
 
-    public function update(User $user, QaThread $qaThread): bool
+    public function update(User $user, QaThread $thread): bool
     {
-        $qaThread->loadMissing('certification');
+        $thread->loadMissing('certification');
 
         return $user->role === UserRole::Student
-            && $qaThread->user_id === $user->id
-            && $qaThread->certification->status === CertificationStatus::Published;
+            && $thread->user_id === $user->id
+            && $thread->certification->status === CertificationStatus::Published;
     }
 
-    public function delete(User $user, QaThread $qaThread): bool
+    public function delete(User $user, QaThread $thread): bool
     {
         if ($user->role === UserRole::Admin) {
             return true;
         }
 
-        $qaThread->loadMissing('certification');
+        $thread->loadMissing('certification');
 
         return $user->role === UserRole::Student
-            && $qaThread->user_id === $user->id
-            && $qaThread->certification->status === CertificationStatus::Published
-            && ! $qaThread->replies()->exists();
+            && $thread->user_id === $user->id
+            && $thread->certification->status === CertificationStatus::Published
+            && ! $thread->replies()->exists();
     }
 
-    public function resolve(User $user, QaThread $qaThread): bool
+    public function resolve(User $user, QaThread $thread): bool
     {
-        $qaThread->loadMissing('certification');
+        $thread->loadMissing('certification');
 
         return $user->role === UserRole::Student
-            && $qaThread->user_id === $user->id
-            && $qaThread->certification->status === CertificationStatus::Published
-            && $qaThread->status === QaThreadStatus::Open;
+            && $thread->user_id === $user->id
+            && $thread->certification->status === CertificationStatus::Published
+            && $thread->status === QaThreadStatus::Open;
     }
 
-    public function unresolve(User $user, QaThread $qaThread): bool
+    public function unresolve(User $user, QaThread $thread): bool
     {
-        $qaThread->loadMissing('certification');
+        $thread->loadMissing('certification');
 
         return $user->role === UserRole::Student
-            && $qaThread->user_id === $user->id
-            && $qaThread->certification->status === CertificationStatus::Published
-            && $qaThread->status === QaThreadStatus::Resolved;
+            && $thread->user_id === $user->id
+            && $thread->certification->status === CertificationStatus::Published
+            && $thread->status === QaThreadStatus::Resolved;
     }
 }
