@@ -57,7 +57,15 @@ final class IndexAction
 
         $query->when(
             $filter['keyword'] ?? null,
-            fn ($q, string $keyword) => $q->where('body', 'like', '%'.$keyword.'%'),
+            function ($q, string $keyword) {
+                $q->where(function ($q) use ($keyword) {
+                    $q->where('title', 'like', '%'.$keyword.'%')
+                        ->orWhere('body', 'like', '%'.$keyword.'%')
+                        ->orWhereHas('replies', function ($q) use ($keyword) {
+                            $q->where('body', 'like', '%'.$keyword.'%');
+                        });
+                });
+            },
         );
 
         $threads = $query

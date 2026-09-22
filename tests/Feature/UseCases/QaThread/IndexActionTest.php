@@ -189,6 +189,34 @@ class IndexActionTest extends TestCase
         $this->assertFalse($threadIds->contains($openThread->id));
     }
 
+    public function test_filters_threads_by_title_keyword(): void
+    {
+        $student = User::factory()->student()->inProgress()->create();
+
+        $certification = Certification::factory()->published()->create();
+
+        $matchingThread = QaThread::factory()
+            ->for($certification)
+            ->create([
+                'title' => 'Laravelについて',
+            ]);
+
+        $nonMatchingThread = QaThread::factory()
+            ->for($certification)
+            ->create([
+                'title' => 'PHPについて',
+            ]);
+
+        $result = app(IndexAction::class)($student, [
+            'keyword' => 'Laravel',
+        ]);
+
+        $threadIds = $result['threads']->pluck('id');
+
+        $this->assertTrue($threadIds->contains($matchingThread->id));
+        $this->assertFalse($threadIds->contains($nonMatchingThread->id));
+    }
+
     public function test_filters_threads_by_body_keyword(): void
     {
         $student = User::factory()->student()->inProgress()->create();
@@ -204,6 +232,41 @@ class IndexActionTest extends TestCase
             ->for($certification)
             ->create([
                 'body' => 'PHPの配列について質問があります。',
+            ]);
+
+        $result = app(IndexAction::class)($student, [
+            'keyword' => 'Laravel',
+        ]);
+
+        $threadIds = $result['threads']->pluck('id');
+
+        $this->assertTrue($threadIds->contains($matchingThread->id));
+        $this->assertFalse($threadIds->contains($nonMatchingThread->id));
+    }
+
+    public function test_filters_threads_by_reply_body_keyword(): void
+    {
+        $student = User::factory()->student()->inProgress()->create();
+
+        $certification = Certification::factory()->published()->create();
+
+        $matchingThread = QaThread::factory()
+            ->for($certification)
+            ->create();
+        $nonMatchingThread = QaThread::factory()
+            ->for($certification)
+            ->create();
+
+        QaReply::factory()
+            ->for($matchingThread, 'thread')
+            ->create([
+                'body' => 'Laravelの認証について回答します。',
+            ]);
+
+        QaReply::factory()
+            ->for($nonMatchingThread, 'thread')
+            ->create([
+                'body' => 'PHPの配列について回答します。',
             ]);
 
         $result = app(IndexAction::class)($student, [
