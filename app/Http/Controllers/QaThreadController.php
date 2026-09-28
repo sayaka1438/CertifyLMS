@@ -122,7 +122,7 @@ class QaThreadController extends Controller
 
         return redirect()
             ->route('qa-board.show', $thread)
-            ->with('success', '質問を解決済みにしました。');
+            ->with('success', '質問を解決済みにマークしました。');
     }
 
     public function unresolve(QaThread $thread, UnresolveAction $action): RedirectResponse
