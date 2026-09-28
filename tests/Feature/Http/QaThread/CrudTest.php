@@ -390,6 +390,7 @@ class CrudTest extends TestCase
         $response = $this->actingAs($student)->post(route('qa-board.resolve', $thread));
 
         $response->assertRedirect(route('qa-board.show', $thread));
+        $response->assertSessionHas('success', '質問を解決済みにマークしました。');
 
         $this->assertDatabaseHas('qa_threads', [
             'id' => $thread->id,
