@@ -72,6 +72,22 @@ class MeetingControllerTest extends TestCase
         $this->actingAs($coach)->get(route('meetings.show', $meeting))->assertOk();
     }
 
+    public function test_graduated_student_cannot_access_show(): void
+    {
+        $student = User::factory()->student()->graduated()->create();
+        $coach = User::factory()->coach()->create();
+        $meeting = Meeting::factory()
+            ->reserved()
+            ->forCoach($coach)
+            ->forStudent($student)
+            ->create();
+
+        $response = $this->actingAs($student)
+            ->get(route('meetings.show', $meeting));
+
+        $response->assertForbidden();
+    }
+
     public function test_create_requires_enrollment_ownership(): void
     {
         $student = User::factory()->student()->inProgress()->create();
@@ -162,6 +178,25 @@ class MeetingControllerTest extends TestCase
 
         $response->assertRedirect();
         $this->assertSame(MeetingStatus::Canceled, $meeting->fresh()->status);
+    }
+
+    public function test_graduated_student_cannot_cancel_meeting(): void
+    {
+        $student = User::factory()->student()->graduated()->create(['max_meetings' => 5]);
+        $coach = User::factory()->coach()->create();
+        $meeting = Meeting::factory()
+            ->reserved()
+            ->forCoach($coach)
+            ->forStudent($student)
+            ->create([
+                'scheduled_at' => now()->addDays(3)->startOfHour(),
+            ]);
+
+        $response = $this->actingAs($student)
+            ->post(route('meetings.cancel', $meeting));
+
+        $response->assertForbidden();
+        $this->assertSame(MeetingStatus::Reserved, $meeting->fresh()->status);
     }
 
     public function test_index_as_coach_only_lists_own_meetings(): void

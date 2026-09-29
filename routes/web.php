@@ -424,7 +424,7 @@ Route::middleware(['auth', 'role:student', 'active-learning'])->group(function (
 // ============================================================
 // 当事者共通ルート — 面談予約の詳細 / キャンセル
 // ============================================================
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(function () {
     Route::get('meetings/{meeting}', [MeetingController::class, 'show'])->name('meetings.show');
     Route::post('meetings/{meeting}/cancel', [MeetingController::class, 'cancel'])->name('meetings.cancel');
 });
