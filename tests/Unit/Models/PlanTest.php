@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 /**
  * Plan モデルのリレーション・Scope・Cast を検証する Unit テスト。
- * 4 リレーション (createdBy / updatedBy / users / userPlanLogs) + 2 scope (published / ordered) +
+ * 4 リレーション (createdBy / updatedBy / users / userPlanLogs) + 3 scope (published / ordered / keyword) +
  * 4 cast (status enum / duration_days int / default_meeting_quota int / sort_order int) を網羅する。
  * Plan は status による状態管理を採用するため SoftDelete は不採用。
  */
@@ -114,6 +114,22 @@ class PlanTest extends TestCase
         // Assert
         $this->assertTrue($results->first()->is($first), 'sort_order 昇順で先頭は sort_order=1 のはず');
         $this->assertTrue($results->last()->is($third), 'sort_order 昇順で末尾は sort_order=3 のはず');
+    }
+
+    public function test_scope_keyword_filters_by_plan_name(): void
+    {
+        $matching = Plan::factory()->create([
+            'name' => '3ヶ月プラン12回',
+        ]);
+
+        Plan::factory()->create([
+            'name' => '6ヶ月プラン24回',
+        ]);
+
+        $results = Plan::keyword('3ヶ月')->get();
+
+        $this->assertCount(1, $results);
+        $this->assertTrue($results->first()->is($matching));
     }
 
     public function test_status_cast_converts_string_to_enum(): void
