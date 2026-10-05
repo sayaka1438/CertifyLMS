@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EnrollmentStatus;
 use App\Enums\MeetingStatus;
+use App\Enums\UserRole;
 use App\Exceptions\MeetingQuota\InsufficientMeetingQuotaException;
 use App\Exceptions\Mentoring\MeetingAlreadyStartedException;
 use App\Exceptions\Mentoring\MeetingNoAvailableCoachException;
@@ -20,9 +21,12 @@ use App\Models\Enrollment;
 use App\Models\Meeting;
 use App\Models\MeetingMemo;
 use App\Models\User;
+use App\Notifications\MeetingCanceledNotification;
+use App\Notifications\MeetingReservedNotification;
 use App\Services\CoachMeetingLoadService;
 use App\Services\MeetingAvailabilityService;
 use App\Services\MeetingQuotaService;
+use App\Services\NotificationEligibilityService;
 use App\UseCases\MeetingQuota\ConsumeQuotaAction;
 use App\UseCases\MeetingQuota\RefundQuotaAction;
 use Carbon\Carbon;
@@ -167,6 +171,7 @@ class MeetingController extends Controller
         CoachMeetingLoadService $coachLoadService,
         MeetingQuotaService $quotaService,
         ConsumeQuotaAction $consumeAction,
+        NotificationEligibilityService $notificationEligibility,
     ): RedirectResponse {
         $scheduledAt = Carbon::parse($request->validated('scheduled_at'));
         $topic = $request->validated('topic');
@@ -207,6 +212,14 @@ class MeetingController extends Controller
             return $meeting->fresh();
         });
 
+        $coach = $meeting->coach;
+
+        if ($notificationEligibility->canReceive($coach)) {
+            $coach->notify(
+                new MeetingReservedNotification($meeting),
+            );
+        }
+
         return redirect()
             ->route('meetings.show', $meeting)
             ->with('success', '面談を予約しました。');
@@ -219,12 +232,13 @@ class MeetingController extends Controller
     public function cancel(
         Meeting $meeting,
         RefundQuotaAction $refundAction,
+        NotificationEligibilityService $notificationEligibility,
     ): RedirectResponse {
         $this->authorize('cancel', $meeting);
 
         $actor = auth()->user();
 
-        DB::transaction(function () use ($meeting, $actor, $refundAction) {
+        $canceledMeeting = DB::transaction(function () use ($meeting, $actor, $refundAction) {
             $locked = Meeting::query()->whereKey($meeting->id)->lockForUpdate()->first();
             if ($locked === null || $locked->status !== MeetingStatus::Reserved) {
                 throw MeetingStatusTransitionException::forCancel();
@@ -241,7 +255,21 @@ class MeetingController extends Controller
             ]);
 
             ($refundAction)($locked->student, $locked->id);
+
+            return $locked->fresh();
         });
+
+        if ($actor->role === UserRole::Student) {
+            $recipient = $canceledMeeting->coach;
+        } else {
+            $recipient = $canceledMeeting->student;
+        }
+
+        if ($notificationEligibility->canReceive($recipient)) {
+            $recipient->notify(
+                new MeetingCanceledNotification($canceledMeeting),
+            );
+        }
 
         return redirect()
             ->route('meetings.show', $meeting)
