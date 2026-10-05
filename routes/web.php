@@ -25,6 +25,7 @@ use App\Http\Controllers\MockExamController;
 use App\Http\Controllers\MockExamQuestionController;
 use App\Http\Controllers\MockExamSessionController;
 use App\Http\Controllers\MockExamSessionMonitorController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\QaReplyController;
@@ -479,6 +480,18 @@ Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(func
     Route::delete('qa-board/{thread}/replies/{reply}', [QaReplyController::class, 'destroy'])
         ->scopeBindings()
         ->name('qa-board.replies.destroy');
+});
+
+// ============================================================
+// 受講生・コーチ共有 — 通知
+// ============================================================
+Route::middleware(['auth', 'role:student,coach'])->group(function () {
+    Route::get('notifications', [NotificationController::class, 'index'])
+        ->name('notifications.index');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])
+        ->name('notifications.markAsRead');
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])
+        ->name('notifications.markAllAsRead');
 });
 
 // ============================================================

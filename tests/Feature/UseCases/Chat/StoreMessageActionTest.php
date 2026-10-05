@@ -9,9 +9,11 @@ use App\Models\ChatMember;
 use App\Models\ChatRoom;
 use App\Models\Enrollment;
 use App\Models\User;
+use App\Notifications\ChatMessageReceivedNotification;
 use App\UseCases\Chat\StoreMessageAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /**
@@ -28,6 +30,7 @@ class StoreMessageActionTest extends TestCase
     public function test_insert_message_and_update_sender_last_read_at(): void
     {
         Event::fake([ChatMessageSent::class]);
+        Notification::fake();
 
         $sender = User::factory()->student()->inProgress()->create();
         $coach = User::factory()->coach()->inProgress()->create();
@@ -39,13 +42,18 @@ class StoreMessageActionTest extends TestCase
             'user_id' => $sender->id,
             'last_read_at' => null,
         ]);
+
         ChatMember::factory()->create([
             'chat_room_id' => $room->id,
             'user_id' => $coach->id,
             'last_read_at' => null,
         ]);
 
-        $message = app(StoreMessageAction::class)($sender, $room, ['body' => 'こんにちは']);
+        $message = app(StoreMessageAction::class)(
+            $sender,
+            $room,
+            ['body' => 'こんにちは'],
+        );
 
         $this->assertDatabaseHas('chat_messages', [
             'id' => $message->id,
@@ -53,6 +61,7 @@ class StoreMessageActionTest extends TestCase
             'sender_user_id' => $sender->id,
             'body' => 'こんにちは',
         ]);
+
         $this->assertNotNull($senderMember->fresh()->last_read_at);
 
         Event::assertDispatched(ChatMessageSent::class);
@@ -67,5 +76,104 @@ class StoreMessageActionTest extends TestCase
         $this->assertSame(User::class, $params[0]->getType()?->getName());
         $this->assertSame(ChatRoom::class, $params[1]->getType()?->getName());
         $this->assertSame('array', $params[2]->getType()?->getName());
+    }
+
+    public function test_sends_notification_to_other_chat_member(): void
+    {
+        Notification::fake();
+        Event::fake([ChatMessageSent::class]);
+
+        $sender = User::factory()->student()->create();
+        $recipient = User::factory()->coach()->inProgress()->create();
+
+        $enrollment = Enrollment::factory()->for($sender)->create();
+        $room = ChatRoom::factory()->for($enrollment)->create();
+
+        ChatMember::factory()->create([
+            'chat_room_id' => $room->id,
+            'user_id' => $sender->id,
+        ]);
+
+        ChatMember::factory()->create([
+            'chat_room_id' => $room->id,
+            'user_id' => $recipient->id,
+        ]);
+
+        app(StoreMessageAction::class)(
+            $sender,
+            $room,
+            ['body' => 'こんにちは'],
+        );
+
+        Notification::assertSentTo(
+            $recipient,
+            ChatMessageReceivedNotification::class,
+        );
+    }
+
+    public function test_does_not_send_notification_to_sender(): void
+    {
+        Notification::fake();
+        Event::fake([ChatMessageSent::class]);
+
+        $sender = User::factory()->student()->inProgress()->create();
+        $recipient = User::factory()->coach()->inProgress()->create();
+
+        $enrollment = Enrollment::factory()->for($sender)->create();
+        $room = ChatRoom::factory()->for($enrollment)->create();
+
+        ChatMember::factory()->create([
+            'chat_room_id' => $room->id,
+            'user_id' => $sender->id,
+        ]);
+
+        ChatMember::factory()->create([
+            'chat_room_id' => $room->id,
+            'user_id' => $recipient->id,
+        ]);
+
+        app(StoreMessageAction::class)(
+            $sender,
+            $room,
+            ['body' => 'こんにちは'],
+        );
+
+        Notification::assertNotSentTo(
+            $sender,
+            ChatMessageReceivedNotification::class,
+        );
+    }
+
+    public function test_does_not_send_notification_to_ineligible_chat_member(): void
+    {
+        Notification::fake();
+        Event::fake([ChatMessageSent::class]);
+
+        $sender = User::factory()->student()->create();
+        $recipient = User::factory()->coach()->graduated()->create();
+
+        $enrollment = Enrollment::factory()->for($sender)->create();
+        $room = ChatRoom::factory()->for($enrollment)->create();
+
+        ChatMember::factory()->create([
+            'chat_room_id' => $room->id,
+            'user_id' => $sender->id,
+        ]);
+
+        ChatMember::factory()->create([
+            'chat_room_id' => $room->id,
+            'user_id' => $recipient->id,
+        ]);
+
+        app(StoreMessageAction::class)(
+            $sender,
+            $room,
+            ['body' => 'こんにちは'],
+        );
+
+        Notification::assertNotSentTo(
+            $recipient,
+            ChatMessageReceivedNotification::class,
+        );
     }
 }
