@@ -50,7 +50,7 @@ class DestroyTest extends TestCase
         $response = $this->actingAs($admin)->deleteJson(route('admin.meeting-packs.destroy', $plan));
 
         $response->assertStatus(409);
-        $response->assertJsonPath('message', '公開中の面談パックは削除できません。');
+        $response->assertJsonPath('message', '公開中の面談パックは削除できません。先に下書きに戻すか、アーカイブしてください。');
 
         $this->assertDatabaseHas('meeting_packs', [
             'id' => $plan->id,

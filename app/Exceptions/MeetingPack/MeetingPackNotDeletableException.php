@@ -10,6 +10,6 @@ final class MeetingPackNotDeletableException extends ConflictHttpException
 {
     public function __construct(?\Throwable $previous = null)
     {
-        parent::__construct('公開中の面談パックは削除できません。', $previous);
+        parent::__construct('公開中の面談パックは削除できません。先に下書きに戻すか、アーカイブしてください。', $previous);
     }
 }
