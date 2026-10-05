@@ -9,6 +9,8 @@ use App\Models\ChatMember;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\User;
+use App\Notifications\ChatMessageReceivedNotification;
+use App\Services\NotificationEligibilityService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,6 +23,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class StoreMessageAction
 {
+    public function __construct(
+        private readonly NotificationEligibilityService $notificationEligibility,
+    ) {}
+
     /**
      * @param array{body: string} $validated
      */
@@ -38,8 +44,26 @@ final class StoreMessageAction
                 ->where('user_id', $sender->id)
                 ->update(['last_read_at' => now()]);
 
-            DB::afterCommit(function () use ($message): void {
+            DB::afterCommit(function () use ($message, $room, $sender): void {
                 broadcast(new ChatMessageSent($message->load('sender')))->toOthers();
+
+                $members = ChatMember::query()
+                    ->forRoom($room)
+                    ->where('user_id', '!=', $sender->id)
+                    ->with('user')
+                    ->get();
+
+                foreach ($members as $member) {
+                    $recipient = $member->user;
+
+                    if (! $this->notificationEligibility->canReceive($recipient)) {
+                        continue;
+                    }
+
+                    $recipient->notify(
+                        new ChatMessageReceivedNotification($message),
+                    );
+                }
             });
 
             return $message;
