@@ -31,4 +31,13 @@ class ShowActionTest extends TestCase
             'ShowAction は詳細表示用に certification を eager load するはず',
         );
     }
+
+    public function test_loads_goals_for_detail_view(): void
+    {
+        $enrollment = Enrollment::factory()->learning()->create();
+
+        $result = app(ShowAction::class)($enrollment);
+
+        $this->assertTrue($result->relationLoaded('goals'));
+    }
 }
