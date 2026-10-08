@@ -12,6 +12,7 @@ use App\Enums\UserStatus;
 use App\Models\Certificate;
 use App\Models\Certification;
 use App\Models\Enrollment;
+use App\Models\EnrollmentGoal;
 use App\Models\EnrollmentStatusLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
@@ -152,6 +153,25 @@ final class EnrollmentSeeder extends Seeder
                     'changed_reason' => '新規登録',
                 ],
             );
+
+            if ($index === 0) {
+                EnrollmentGoal::factory()
+                    ->for($enrollment)
+                    ->achieved()
+                    ->create([
+                        'title' => '個人学習目標(達成済)',
+                        'description' => '個人学習目標の達成マーク UI の即時確認用',
+                        'target_date' => now()->subWeek()->toDateString(),
+                    ]);
+
+                EnrollmentGoal::factory()
+                    ->for($enrollment)
+                    ->create([
+                        'title' => '個人学習目標(未達成)',
+                        'description' => '個人学習目標の達成マーク UI の即時確認用',
+                        'target_date' => now()->addMonth()->toDateString(),
+                    ]);
+            }
         }
     }
 
@@ -201,6 +221,16 @@ final class EnrollmentSeeder extends Seeder
             ]);
 
             $this->seedStatusLogs($enrollment, $pattern['state'], $student);
+
+            if ($i % 2 === 0) {
+                EnrollmentGoal::factory()
+                    ->for($enrollment)
+                    ->create([
+                        'title' => '個人学習目標(未達成)',
+                        'description' => '個人学習目標の認可確認用',
+                        'target_date' => now()->addMonth()->toDateString(),
+                    ]);
+            }
 
             if ($pattern['state'] === 'passed') {
                 $this->issueCertificate($enrollment, $passedAt);
