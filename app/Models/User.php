@@ -9,6 +9,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Notifications\Auth\ResetPasswordNotification;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * プラン受講中のユーザーを表す Model。
@@ -309,5 +311,19 @@ class User extends Authenticatable
     public function scopeActive(Builder $query): Builder
     {
         return $query->whereIn('status', [UserStatus::InProgress, UserStatus::Graduated]);
+    }
+
+    /**
+     * アバター画像の保存パスを表示用URLへ変換する。
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value !== null
+                ? Storage::disk('public')->url($value)
+                : null,
+        );
     }
 }
