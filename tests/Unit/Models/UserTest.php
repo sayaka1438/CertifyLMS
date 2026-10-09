@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -267,5 +268,29 @@ class UserTest extends TestCase
             User::withTrashed()->find($userId),
             'withTrashed で SoftDelete 済みの user を取得できるはず',
         );
+    }
+
+    public function test_avatar_url_accessor_converts_storage_path_to_public_url(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->student()->create([
+            'avatar_url' => 'avatars/avatar.jpg',
+        ]);
+
+        $avatarUrl = $user->avatar_url;
+
+        $this->assertSame(Storage::disk('public')->url('avatars/avatar.jpg'), $avatarUrl);
+    }
+
+    public function test_avatar_url_accessor_returns_null_when_avatar_is_not_set(): void
+    {
+        $user = User::factory()->student()->create([
+            'avatar_url' => null,
+        ]);
+
+        $avatarUrl = $user->avatar_url;
+
+        $this->assertNull($avatarUrl);
     }
 }
