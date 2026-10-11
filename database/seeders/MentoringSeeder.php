@@ -10,6 +10,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\CoachAvailability;
 use App\Models\Enrollment;
+use App\Models\EnrollmentNote;
 use App\Models\Meeting;
 use App\Models\MeetingMemo;
 use App\Models\MeetingQuotaTransaction;
@@ -39,6 +40,7 @@ final class MentoringSeeder extends Seeder
         $this->seedFixedStudentMeetings();
         $this->seedNoQuotaStudentMeetings();
         $this->seedDemoMeetings();
+        $this->seedEnrollmentNotes();
     }
 
     /**
@@ -301,5 +303,82 @@ final class MentoringSeeder extends Seeder
         }
 
         return $date->subWeeks($weeksAgo)->setTime($hour, 0, 0);
+    }
+
+    private function seedEnrollmentNotes(): void
+    {
+        $coach1 = User::query()->where('email', 'coach@certify-lms.test')->first();
+        $coach2 = User::query()->where('email', 'coach2@certify-lms.test')->first();
+        $admin = User::query()->where('email', 'admin@certify-lms.test')->first();
+
+        if ($coach1 === null || $coach2 === null || $admin === null) {
+            return;
+        }
+
+        $toeicEnrollment = Enrollment::query()
+            ->whereHas('user', fn ($query) => $query
+                ->where('email', 'student@certify-lms.test'))
+            ->whereHas('certification', fn ($query) => $query
+                ->where('name', 'TOEIC L&R 800 点コース'))
+            ->first();
+
+        if ($toeicEnrollment === null) {
+            return;
+        }
+
+        EnrollmentNote::factory()->create([
+            'enrollment_id' => $toeicEnrollment->id,
+            'created_by_user_id' => $coach1->id,
+            'body' => '学習ペースは順調です。リスニング分野に苦手意識があるため、次回まで重点的に取り組むよう案内しました。',
+        ]);
+
+        EnrollmentNote::factory()->create([
+            'enrollment_id' => $toeicEnrollment->id,
+            'created_by_user_id' => $coach2->id,
+            'body' => '単語学習は継続できています。今後は長文問題の時間配分を意識して演習を進めるよう案内しました。',
+        ]);
+
+        EnrollmentNote::factory()->create([
+            'enrollment_id' => $toeicEnrollment->id,
+            'created_by_user_id' => $admin->id,
+            'body' => '学習状況を確認しました。現在の進捗に問題はありません。引き続き担当コーチ間で状況を共有しながらサポートしてください。',
+        ]);
+
+        $bookkeepingEnrollment = Enrollment::query()
+            ->whereHas('certification', fn ($query) => $query
+                ->where('name', '日商簿記 2 級'))
+            ->first();
+
+        if ($bookkeepingEnrollment !== null) {
+            EnrollmentNote::factory()->create([
+                'enrollment_id' => $bookkeepingEnrollment->id,
+                'created_by_user_id' => $coach2->id,
+                'body' => '簿記の学習状況を確認しました。仕訳問題を中心に復習し、苦手分野を整理して進めるよう案内しました。',
+            ]);
+        }
+
+        $demoEnrollments = Enrollment::query()
+            ->where('status', EnrollmentStatus::Learning->value)
+            ->whereHas('user', fn ($query) => $query
+                ->where('email', '!=', 'student@certify-lms.test'))
+            ->with('certification.coaches')
+            ->take(6)
+            ->get();
+
+        foreach ($demoEnrollments as $index => $enrollment) {
+            $coaches = $enrollment->certification->coaches;
+
+            if ($coaches->isEmpty()) {
+                continue;
+            }
+
+            $coach = $coaches->get($index % $coaches->count());
+
+            EnrollmentNote::factory()->create([
+                'enrollment_id' => $enrollment->id,
+                'created_by_user_id' => $coach->id,
+                'body' => '学習状況を確認しました。現在の進捗を踏まえ、次回までの学習方針を案内しました。',
+            ]);
+        }
     }
 }
