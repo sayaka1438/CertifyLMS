@@ -33,13 +33,12 @@ class DestroyTest extends TestCase
         $admin = User::factory()->admin()->create();
         $plan = Plan::factory()->draft()->create();
 
-        User::factory()->student()->withPlan($plan)->create();
+        User::factory()->student()->inProgress()->withPlan($plan)->create();
 
         $response = $this->actingAs($admin)->deleteJson(route('admin.plans.destroy', $plan));
 
         $response->assertStatus(409);
-        $response->assertJsonPath('message', '下書きかつ受講者が紐づいていないプランのみ削除できます。');
-
+        $response->assertJsonPath('message', '受講者が紐づいているプランは削除できません。');
         $this->assertDatabaseHas('plans', [
             'id' => $plan->id,
         ]);
@@ -53,7 +52,7 @@ class DestroyTest extends TestCase
         $response = $this->actingAs($admin)->deleteJson(route('admin.plans.destroy', $plan));
 
         $response->assertStatus(409);
-        $response->assertJsonPath('message', '下書きかつ受講者が紐づいていないプランのみ削除できます。');
+        $response->assertJsonPath('message', '下書き状態のプランのみ削除できます。先に下書きに戻すか、アーカイブを利用してください。');
 
         $this->assertDatabaseHas('plans', [
             'id' => $plan->id,
@@ -68,7 +67,7 @@ class DestroyTest extends TestCase
         $response = $this->actingAs($admin)->deleteJson(route('admin.plans.destroy', $plan));
 
         $response->assertStatus(409);
-        $response->assertJsonPath('message', '下書きかつ受講者が紐づいていないプランのみ削除できます。');
+        $response->assertJsonPath('message', '下書き状態のプランのみ削除できます。先に下書きに戻すか、アーカイブを利用してください。');
 
         $this->assertDatabaseHas('plans', [
             'id' => $plan->id,

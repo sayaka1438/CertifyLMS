@@ -44,11 +44,33 @@ class DestroyActionTest extends TestCase
         app(DestroyAction::class)($plan);
     }
 
-    public function test_throws_when_draft_plan_has_user(): void
+    public function test_throws_when_draft_plan_has_in_progress_user(): void
     {
         $plan = Plan::factory()->draft()->create();
 
-        User::factory()->student()->withPlan($plan)->create();
+        User::factory()->student()->inProgress()->withPlan($plan)->create();
+
+        $this->expectException(PlanNotDeletableException::class);
+
+        app(DestroyAction::class)($plan);
+    }
+
+    public function test_throws_when_draft_plan_has_graduated_user(): void
+    {
+        $plan = Plan::factory()->draft()->create();
+
+        User::factory()->student()->graduated()->withPlan($plan)->create();
+
+        $this->expectException(PlanNotDeletableException::class);
+
+        app(DestroyAction::class)($plan);
+    }
+
+    public function test_throws_when_draft_plan_has_withdrawn_user(): void
+    {
+        $plan = Plan::factory()->draft()->create();
+
+        User::factory()->student()->withdrawn()->withPlan($plan)->create();
 
         $this->expectException(PlanNotDeletableException::class);
 
