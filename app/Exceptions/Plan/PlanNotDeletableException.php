@@ -8,9 +8,18 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class PlanNotDeletableException extends ConflictHttpException
 {
-    // TODO: PM確認後、利用履歴も削除条件に含む場合はメッセージを修正する
-    public function __construct(?\Throwable $previous = null)
+    public static function becauseNotDraft(): self
     {
-        parent::__construct('下書きかつ受講者が紐づいていないプランのみ削除できます。', $previous);
+        return new self('下書き状態のプランのみ削除できます。先に下書きに戻すか、アーカイブを利用してください。');
+    }
+
+    public static function becauseHasUsers(): self
+    {
+        return new self('受講者が紐づいているプランは削除できません。');
+    }
+
+    private function __construct(string $message, ?\Throwable $previous = null)
+    {
+        parent::__construct($message, $previous);
     }
 }
