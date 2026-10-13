@@ -81,4 +81,19 @@ class GraduateExpiredUsersCommandTest extends TestCase
 
         $this->assertSame(UserStatus::InProgress, $user->fresh()->status);
     }
+
+    public function test_all_expired_users_are_graduated_when_count_exceeds_chunk_size(): void
+    {
+        $plan = Plan::factory()->published()->create();
+        User::factory()->inProgress()->withPlan($plan)->count(101)->create([
+            'plan_expires_at' => now()->subDay(),
+        ]);
+
+        $this->artisan('users:graduate-expired')->assertExitCode(0);
+
+        $this->assertSame(
+            101,
+            User::where('status', UserStatus::Graduated->value)->count(),
+        );
+    }
 }

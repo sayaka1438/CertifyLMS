@@ -39,4 +39,19 @@ class AutoCompleteMeetingsCommandTest extends TestCase
         $this->assertSame(3, $completedCount);
         $this->assertSame(1, $reservedCount);
     }
+
+    public function test_all_overdue_meetings_are_completed_when_count_exceeds_chunk_size(): void
+    {
+        Meeting::factory()->reserved()->inPast()->count(101)->create();
+
+        $this->artisan('meetings:auto-complete')->assertExitCode(0);
+
+        $this->assertSame(
+            101,
+            Meeting::where(
+                'status',
+                MeetingStatus::Completed->value,
+            )->count(),
+        );
+    }
 }
