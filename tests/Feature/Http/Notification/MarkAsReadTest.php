@@ -59,6 +59,31 @@ class MarkAsReadTest extends TestCase
         $this->assertNull($notification->fresh()->read_at);
     }
 
+    public function test_redirects_to_notification_show_after_marking_admin_announcement_as_read(): void
+    {
+        $student = User::factory()->student()->create();
+
+        $notification = DatabaseNotification::query()->create([
+            'id' => (string) Str::uuid(),
+            'type' => 'test_notification',
+            'notifiable_type' => User::class,
+            'notifiable_id' => $student->id,
+            'data' => [
+                'title' => 'メンテナンスのお知らせ',
+                'body' => 'メンテナンスを実施します。',
+                'message' => 'メンテナンスを実施します。',
+                'notification_type' => 'admin_announcement',
+            ],
+            'read_at' => null,
+        ]);
+
+        $response = $this->actingAs($student)->post(route('notifications.markAsRead', $notification));
+
+        $response->assertRedirect(route('notifications.show', $notification));
+
+        $this->assertNotNull($notification->fresh()->read_at);
+    }
+
     public function test_redirects_to_notification_url_after_marking_as_read(): void
     {
         $student = User::factory()->student()->create();
