@@ -62,4 +62,19 @@ class FailExpiredEnrollmentsCommandTest extends TestCase
             'changed_reason' => '試験日超過による自動失敗',
         ]);
     }
+
+    public function test_all_expired_enrollments_are_failed_when_count_exceeds_chunk_size(): void
+    {
+        Enrollment::factory()->learning()->count(101)->create(['exam_date' => now()->subDay()->toDateString()]);
+
+        $this->artisan('enrollments:fail-expired')->assertExitCode(0);
+
+        $this->assertSame(
+            101,
+            Enrollment::where(
+                'status',
+                EnrollmentStatus::Failed->value,
+            )->count(),
+        );
+    }
 }
