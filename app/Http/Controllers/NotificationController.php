@@ -8,6 +8,7 @@ use App\Http\Requests\Notification\IndexRequest;
 use App\UseCases\Notification\IndexAction;
 use App\UseCases\Notification\MarkAllAsReadAction;
 use App\UseCases\Notification\MarkAsReadAction;
+use App\UseCases\Notification\ShowAction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,6 +33,18 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function show(Request $request, string $notification, ShowAction $action): View
+    {
+        $notification = $action(
+            user: $request->user(),
+            notificationId: $notification,
+        );
+
+        return view('notifications.show', [
+            'notification' => $notification,
+        ]);
+    }
+
     public function markAsRead(Request $request, string $notification, MarkAsReadAction $action): RedirectResponse
     {
         $notification = $action(
@@ -39,7 +52,13 @@ class NotificationController extends Controller
             notificationId: $notification,
         );
 
+        $notificationType = $notification->data['notification_type'] ?? null;
         $url = $notification->data['url'] ?? null;
+
+        if ($notificationType === 'admin_announcement') {
+            return redirect()
+                ->route('notifications.show', $notification->id);
+        }
 
         if ($url !== null) {
             return redirect($url);
