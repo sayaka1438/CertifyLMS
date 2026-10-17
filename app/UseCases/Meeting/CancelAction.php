@@ -11,6 +11,7 @@ use App\Exceptions\Mentoring\MeetingStatusTransitionException;
 use App\Models\Meeting;
 use App\Models\User;
 use App\Notifications\MeetingCanceledNotification;
+use App\Services\GoogleCalendarService;
 use App\Services\NotificationEligibilityService;
 use App\UseCases\MeetingQuota\RefundQuotaAction;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ final class CancelAction
     public function __construct(
         private readonly RefundQuotaAction $refundAction,
         private readonly NotificationEligibilityService $notificationEligibility,
+        private readonly GoogleCalendarService $googleCalendarService,
     ) {}
 
     public function __invoke(
@@ -60,6 +62,21 @@ final class CancelAction
                 $recipient->notify(
                     new MeetingCanceledNotification($canceledMeeting),
                 );
+            }
+
+            if ($canceledMeeting->google_calendar_event_id !== null) {
+                try {
+                    $credential = $canceledMeeting->coach->googleCredential;
+
+                    if ($credential !== null) {
+                        $this->googleCalendarService->deleteEvent(
+                            $credential,
+                            $canceledMeeting->google_calendar_event_id,
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    report($e);
+                }
             }
 
             return $canceledMeeting;

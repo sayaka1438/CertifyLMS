@@ -11,6 +11,7 @@ use App\Enums\UserStatus;
 use App\Models\CoachAvailability;
 use App\Models\Enrollment;
 use App\Models\EnrollmentNote;
+use App\Models\GoogleCredential;
 use App\Models\Meeting;
 use App\Models\MeetingMemo;
 use App\Models\MeetingQuotaTransaction;
@@ -37,6 +38,7 @@ final class MentoringSeeder extends Seeder
     public function run(): void
     {
         $this->seedCoachAvailabilities();
+        $this->seedGoogleCalendarConnections();
         $this->seedFixedStudentMeetings();
         $this->seedNoQuotaStudentMeetings();
         $this->seedDemoMeetings();
@@ -92,6 +94,27 @@ final class MentoringSeeder extends Seeder
                 ->timeRange('13:00:00', '17:00:00')
                 ->create();
         }
+    }
+
+    /**
+     * Google Calendar 連携状態のデモデータを投入する。
+     *
+     * coach@certify-lms.test は連携済み、
+     * coach2@certify-lms.test は未連携の状態を維持する。
+     */
+    private function seedGoogleCalendarConnections(): void
+    {
+        $connectedCoach = User::query()
+            ->where('email', 'coach@certify-lms.test')
+            ->first();
+
+        if ($connectedCoach === null) {
+            return;
+        }
+
+        GoogleCredential::factory()
+            ->for($connectedCoach, 'user')
+            ->create();
     }
 
     /**

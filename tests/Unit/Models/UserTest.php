@@ -10,6 +10,7 @@ use App\Enums\UserStatus;
 use App\Models\Certification;
 use App\Models\CertificationCoachAssignment;
 use App\Models\Enrollment;
+use App\Models\GoogleCredential;
 use App\Models\Invitation;
 use App\Models\Plan;
 use App\Models\User;
@@ -71,6 +72,19 @@ class UserTest extends TestCase
         // Assert
         $this->assertNotNull($default, 'default_enrollment_id が set されている user は defaultEnrollment を取得できるはず');
         $this->assertTrue($default->is($enrollment));
+    }
+
+    public function test_google_credential_relation_returns_user_credential(): void
+    {
+        $coach = User::factory()->coach()->create();
+
+        $googleCredential = GoogleCredential::factory()
+            ->for($coach, 'user')
+            ->create();
+
+        $credential = $coach->googleCredential;
+
+        $this->assertTrue($credential->is($googleCredential));
     }
 
     public function test_assigned_certifications_returns_only_active_pivot_rows(): void

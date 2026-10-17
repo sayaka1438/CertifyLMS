@@ -13,6 +13,7 @@ use App\Models\Meeting;
 use App\Models\User;
 use App\Notifications\MeetingReservedNotification;
 use App\Services\CoachMeetingLoadService;
+use App\Services\GoogleCalendarService;
 use App\Services\MeetingAvailabilityService;
 use App\Services\MeetingQuotaService;
 use App\Services\NotificationEligibilityService;
@@ -30,6 +31,7 @@ final class StoreAction
         private readonly MeetingQuotaService $quotaService,
         private readonly ConsumeQuotaAction $consumeAction,
         private readonly NotificationEligibilityService $notificationEligibility,
+        private readonly GoogleCalendarService $googleCalendarService,
     ) {}
 
     public function __invoke(
@@ -89,6 +91,21 @@ final class StoreAction
                 );
             }
 
+            if ($coach->googleCredential !== null) {
+                try {
+                    $eventId = $this->googleCalendarService->createEvent(
+                        $coach->googleCredential,
+                        $meeting,
+                    );
+
+                    $meeting->update([
+                        'google_calendar_event_id' => $eventId,
+                    ]);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+
             return $meeting;
         });
     }
@@ -102,7 +119,8 @@ final class StoreAction
     ): Collection {
         $time = $scheduledAt->format('H:i:s');
 
-        return $certification->coaches()
+        $candidates = $certification->coaches()
+            ->with('googleCredential')
             ->whereHas('coachAvailabilities', function ($q) use ($scheduledAt, $time) {
                 $q->where('day_of_week', $scheduledAt->dayOfWeek)
                     ->where('is_active', true)
@@ -117,5 +135,29 @@ final class StoreAction
                     ]);
             })
             ->get();
+
+        $slotEnd = $scheduledAt->copy()->addHour();
+
+        return $candidates
+            ->filter(function (User $coach) use ($scheduledAt, $slotEnd) {
+                if ($coach->googleCredential === null) {
+                    return true;
+                }
+
+                try {
+                    $busyPeriods = $this->googleCalendarService->busyPeriods(
+                        $coach->googleCredential,
+                        $scheduledAt,
+                        $slotEnd,
+                    );
+
+                    return $busyPeriods === [];
+                } catch (\Throwable $e) {
+                    report($e);
+
+                    return true;
+                }
+            })
+            ->values();
     }
 }
