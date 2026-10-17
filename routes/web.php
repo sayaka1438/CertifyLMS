@@ -17,6 +17,7 @@ use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\EnrollmentGoalController;
 use App\Http\Controllers\EnrollmentManagementController;
 use App\Http\Controllers\EnrollmentNoteController;
+use App\Http\Controllers\GoogleCalendarController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LearningHourTargetController;
 use App\Http\Controllers\MeetingController;
@@ -591,6 +592,18 @@ Route::middleware(['auth', 'role:coach'])
         Route::post('/', [SettingsAvailabilityController::class, 'store'])->name('store');
         Route::patch('{availability}', [SettingsAvailabilityController::class, 'update'])->name('update');
         Route::delete('{availability}', [SettingsAvailabilityController::class, 'destroy'])->name('destroy');
+    });
+
+// ============================================================
+// コーチ専用ルート — Google Calendar 連携
+// ============================================================
+Route::middleware(['auth', 'role:coach'])
+    ->prefix('settings/google-calendar')
+    ->name('settings.google-calendar.')
+    ->group(function () {
+        Route::get('connect', [GoogleCalendarController::class, 'redirect'])->name('redirect');
+        Route::get('callback', [GoogleCalendarController::class, 'callback'])->name('callback');
+        Route::delete('/', [GoogleCalendarController::class, 'destroy'])->name('destroy');
     });
 
 // ============================================================
