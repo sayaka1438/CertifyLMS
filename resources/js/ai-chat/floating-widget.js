@@ -153,7 +153,7 @@ export function initAiChatWidget() {
     }
 
     function describeError(err) {
-        if (err?.type === 'rate-limit') return '本日の利用上限に達しました。明日 0:00 以降に再度ご利用ください。';
+        if (err?.type === 'rate-limit') return '本日のAIチャットの送信上限に達しました。明日 0:00 以降に再度ご利用ください。';
         if (err?.type === 'llm') {
             const upstream = err.upstreamStatus;
             if (upstream === 429) {
