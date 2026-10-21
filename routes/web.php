@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\BrowseController;
@@ -526,6 +527,24 @@ Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(func
         ->name('chat.show');
     Route::post('chat-rooms/{room}/messages', [ChatRoomController::class, 'storeMessage'])
         ->name('chat.storeMessage');
+});
+
+// ============================================================
+// 受講生専用 — AIチャット
+// ============================================================
+Route::middleware(['auth', 'role:student', 'active-learning', 'ai-chat-enabled', 'ai-chat-configured'])->group(function () {
+    Route::get('ai-chat', [AiChatController::class, 'index'])
+        ->name('ai-chat.index');
+    Route::post('ai-chat/conversations', [AiChatController::class, 'store'])
+        ->name('ai-chat.conversations.store');
+    Route::get('ai-chat/conversations/{conversation}', [AiChatController::class, 'show'])
+        ->name('ai-chat.conversations.show');
+    Route::patch('ai-chat/conversations/{conversation}', [AiChatController::class, 'update'])
+        ->name('ai-chat.conversations.update');
+    Route::delete('ai-chat/conversations/{conversation}', [AiChatController::class, 'destroy'])
+        ->name('ai-chat.conversations.destroy');
+    Route::post('ai-chat/conversations/{conversation}/messages', [AiChatController::class, 'storeMessage'])
+        ->name('ai-chat.conversations.messages.store');
 });
 
 // ============================================================

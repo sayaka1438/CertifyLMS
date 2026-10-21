@@ -15,9 +15,22 @@ function initForm() {
 
     const textarea = form.querySelector('[data-ai-chat-textarea]');
     const submit = form.querySelector('[data-ai-chat-submit]');
-    const list = document.querySelector('[data-message-list]');
+    let list = document.querySelector('[data-message-list]');
     const scroller = document.querySelector('[data-message-scroller]');
     const titleEl = document.querySelector('[data-conversation-title]');
+
+    if (!list && scroller) {
+        list = document.createElement('ul');
+        list.setAttribute('role', 'log');
+        list.setAttribute('aria-live', 'polite');
+        list.setAttribute('aria-atomic', 'false');
+        list.setAttribute('aria-label', 'AI 相談メッセージ');
+        list.className = 'flex flex-col gap-4 max-w-[760px] mx-auto w-full';
+        list.dataset.messageList = '';
+
+        scroller.innerHTML = '';
+        scroller.appendChild(list);
+    }
 
     if (!list) return;
 
@@ -142,7 +155,7 @@ function initForm() {
 }
 
 function describeError(err) {
-    if (err.type === 'rate-limit') return '本日の利用上限に達しました。明日 0:00 以降に再度ご利用ください。';
+    if (err.type === 'rate-limit') return '本日のAIチャットの送信上限に達しました。明日 0:00 以降に再度ご利用ください。';
     if (err.type === 'validation') return '入力内容を確認してください (1-2000 文字)。';
     if (err.type === 'llm') {
         const upstream = err.upstreamStatus;
