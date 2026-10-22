@@ -129,13 +129,17 @@ class GoogleCalendarService
             $meeting->scheduled_at->copy()->addHour()->toRfc3339String()
         );
 
+        $studentName = $meeting->student->name;
+        $certificationName = $meeting->enrollment->certification->name;
+
         $event = new Event;
-        $event->setSummary('【CertifyLMS】面談');
+        $event->setSummary("【CertifyLMS】{$studentName}（{$certificationName}）");
         $event->setDescription(
-            "受講生：{$meeting->student->name}\n"
-            ."予約内容：{$meeting->topic}\n"
+            "受講生：{$studentName}\n"
+            ."相談内容：{$meeting->topic}\n"
             ."面談URL：{$meeting->meeting_url_snapshot}"
         );
+        $event->setLocation($meeting->meeting_url_snapshot);
         $event->setStart($start);
         $event->setEnd($end);
 
