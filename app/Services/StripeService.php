@@ -42,9 +42,7 @@ class StripeService
             'success_url' => route('meeting-quota.success', [
                 'payment_id' => $payment->id,
             ]),
-            'cancel_url' => route('meeting-quota.checkout.select', [
-                'canceled' => 1,
-            ]),
+            'cancel_url' => route('meeting-quota.checkout.cancel'),
         ]);
     }
 
