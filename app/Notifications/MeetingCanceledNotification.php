@@ -25,8 +25,8 @@ class MeetingCanceledNotification extends Notification
         $scheduledAt = $this->meeting->scheduled_at->format('Y年m月d日 H:i');
 
         return (new MailMessage)
-            ->subject('面談がキャンセルされました。')
-            ->greeting('Certify LMS をご利用の皆様へ')
+            ->subject("【Certify LMS】{$this->meeting->canceledBy->name}さんから面談がキャンセルされました")
+            ->greeting('お世話になっております。')
             ->line("{$scheduledAt}の面談がキャンセルされました。")
             ->action('面談を確認する', route('meetings.show', $this->meeting))
             ->salutation('Certify LMS 運営チーム');
@@ -40,7 +40,7 @@ class MeetingCanceledNotification extends Notification
         $scheduledAt = $this->meeting->scheduled_at->format('Y年m月d日 H:i');
 
         return [
-            'title' => '面談がキャンセルされました。',
+            'title' => "{$this->meeting->canceledBy->name}さんから面談がキャンセルされました",
             'message' => "{$scheduledAt}の面談がキャンセルされました。",
             'notification_type' => 'meeting_canceled',
             'url' => route('meetings.show', $this->meeting),

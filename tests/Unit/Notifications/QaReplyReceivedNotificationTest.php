@@ -18,8 +18,9 @@ class QaReplyReceivedNotificationTest extends TestCase
     {
         $thread = QaThread::factory()->create();
         $student = User::factory()->student()->create();
+        $replyUser = User::factory()->coach()->create();
 
-        $notification = new QaReplyReceivedNotification($thread);
+        $notification = new QaReplyReceivedNotification($thread, $replyUser);
 
         $this->assertSame(
             ['database', 'mail'],
@@ -31,14 +32,15 @@ class QaReplyReceivedNotificationTest extends TestCase
     {
         $thread = QaThread::factory()->create();
         $student = User::factory()->student()->create();
+        $replyUser = User::factory()->coach()->create();
 
-        $notification = new QaReplyReceivedNotification($thread);
+        $notification = new QaReplyReceivedNotification($thread, $replyUser);
 
         $data = $notification->toArray($student);
 
         $this->assertSame(
             [
-                'title' => 'Q&Aに回答が届きました',
+                'title' => "{$replyUser->name}さんからQ&Aに回答が届きました",
                 'message' => "「{$thread->title}」に回答が投稿されました。",
                 'notification_type' => 'qa_reply_received',
                 'url' => route('qa-board.show', $thread),
@@ -51,18 +53,19 @@ class QaReplyReceivedNotificationTest extends TestCase
     {
         $thread = QaThread::factory()->create();
         $student = User::factory()->student()->create();
+        $replyUser = User::factory()->coach()->create();
 
-        $notification = new QaReplyReceivedNotification($thread);
+        $notification = new QaReplyReceivedNotification($thread, $replyUser);
 
         $mail = $notification->toMail($student);
 
         $this->assertSame(
-            'Q&Aに回答が届きました',
+            "【Certify LMS】{$replyUser->name}さんからQ&Aに回答が届きました",
             $mail->subject,
         );
 
         $this->assertSame(
-            'Certify LMS をご利用の皆様へ',
+            'お世話になっております。',
             $mail->greeting,
         );
 

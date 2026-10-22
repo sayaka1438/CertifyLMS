@@ -32,7 +32,7 @@ final class StoreAction
 
         if ($this->notificationEligibility->canReceive($recipient)) {
             $recipient->notify(
-                new QaReplyReceivedNotification($thread),
+                new QaReplyReceivedNotification($thread, $user),
             );
         }
 

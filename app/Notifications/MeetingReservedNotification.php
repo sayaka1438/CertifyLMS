@@ -25,8 +25,8 @@ class MeetingReservedNotification extends Notification
         $scheduledAt = $this->meeting->scheduled_at->format('Y年m月d日 H:i');
 
         return (new MailMessage)
-            ->subject('面談が予約されました')
-            ->greeting('Certify LMS をご利用の皆様へ')
+            ->subject("【Certify LMS】{$this->meeting->student->name}さんから面談が予約されました")
+            ->greeting('お世話になっております。')
             ->line("{$scheduledAt}の面談が予約されました。")
             ->action('面談を確認する', route('meetings.show', $this->meeting))
             ->salutation('Certify LMS 運営チーム');
@@ -40,7 +40,7 @@ class MeetingReservedNotification extends Notification
         $scheduledAt = $this->meeting->scheduled_at->format('Y年m月d日 H:i');
 
         return [
-            'title' => '面談が予約されました',
+            'title' => "{$this->meeting->student->name}さんから面談が予約されました",
             'message' => "{$scheduledAt}の面談が予約されました。",
             'notification_type' => 'meeting_reserved',
             'url' => route('meetings.show', $this->meeting),
