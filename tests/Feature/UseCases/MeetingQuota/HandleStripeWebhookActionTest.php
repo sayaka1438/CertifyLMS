@@ -34,14 +34,16 @@ class HandleStripeWebhookActionTest extends TestCase
             paymentStatus: 'paid',
             currency: 'jpy',
             amountTotal: 12000,
+            paymentIntentId: 'pi_test_completed',
         );
 
         app(HandleStripeWebhookAction::class)($event);
 
         $payment->refresh();
 
-        $this->assertSame(PaymentStatus::Completed, $payment->status);
-        $this->assertNotNull($payment->completed_at);
+        $this->assertSame(PaymentStatus::Succeeded, $payment->status);
+        $this->assertSame('pi_test_completed', $payment->stripe_payment_intent_id);
+        $this->assertNotNull($payment->paid_at);
 
         $this->assertDatabaseHas('meeting_quota_transactions', [
             'user_id' => $student->id,
@@ -65,6 +67,7 @@ class HandleStripeWebhookActionTest extends TestCase
             paymentStatus: 'unpaid',
             currency: 'jpy',
             amountTotal: 12000,
+            paymentIntentId: 'pi_test_unpaid',
         );
 
         app(HandleStripeWebhookAction::class)($event);
@@ -93,6 +96,7 @@ class HandleStripeWebhookActionTest extends TestCase
             paymentStatus: 'unpaid',
             currency: 'jpy',
             amountTotal: 12000,
+            paymentIntentId: 'pi_test_unexpected',
         );
 
         app(HandleStripeWebhookAction::class)($event);
@@ -121,6 +125,7 @@ class HandleStripeWebhookActionTest extends TestCase
             paymentStatus: 'paid',
             currency: 'jpy',
             amountTotal: 12000,
+            paymentIntentId: 'pi_test_mismatch',
         );
 
         app(HandleStripeWebhookAction::class)($event);
@@ -149,6 +154,7 @@ class HandleStripeWebhookActionTest extends TestCase
             paymentStatus: 'paid',
             currency: 'usd',
             amountTotal: 12000,
+            paymentIntentId: 'pi_test_currency_mismatch',
         );
 
         app(HandleStripeWebhookAction::class)($event);
@@ -177,6 +183,7 @@ class HandleStripeWebhookActionTest extends TestCase
             paymentStatus: 'paid',
             currency: 'jpy',
             amountTotal: 9999,
+            paymentIntentId: 'pi_test_amount_mismatch',
         );
 
         app(HandleStripeWebhookAction::class)($event);
@@ -198,6 +205,7 @@ class HandleStripeWebhookActionTest extends TestCase
         string $paymentStatus,
         string $currency,
         int $amountTotal,
+        string $paymentIntentId,
     ): Event {
         return Event::constructFrom([
             'id' => 'evt_test',
@@ -208,6 +216,7 @@ class HandleStripeWebhookActionTest extends TestCase
                     'id' => $sessionId,
                     'object' => 'checkout.session',
                     'payment_status' => $paymentStatus,
+                    'payment_intent' => $paymentIntentId,
                     'currency' => $currency,
                     'amount_total' => $amountTotal,
                     'metadata' => [

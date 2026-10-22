@@ -27,12 +27,16 @@ class CompletePaymentActionTest extends TestCase
             'amount' => 12000,
         ]);
 
-        app(CompletePaymentAction::class)($payment);
+        app(CompletePaymentAction::class)(
+            payment: $payment,
+            stripePaymentIntentId: 'pi_test_completed',
+        );
 
         $payment->refresh();
 
-        $this->assertSame(PaymentStatus::Completed, $payment->status);
-        $this->assertNotNull($payment->completed_at);
+        $this->assertSame(PaymentStatus::Succeeded, $payment->status);
+        $this->assertSame('pi_test_completed', $payment->stripe_payment_intent_id);
+        $this->assertNotNull($payment->paid_at);
 
         $this->assertDatabaseHas('meeting_quota_transactions', [
             'user_id' => $student->id,
@@ -58,7 +62,10 @@ class CompletePaymentActionTest extends TestCase
 
         $this->assertSame(2, $service->remaining($student));
 
-        app(CompletePaymentAction::class)($payment);
+        app(CompletePaymentAction::class)(
+            payment: $payment,
+            stripePaymentIntentId: 'pi_test_completed',
+        );
 
         $this->assertSame(7, $service->remaining($student));
     }
@@ -77,8 +84,14 @@ class CompletePaymentActionTest extends TestCase
 
         $action = app(CompletePaymentAction::class);
 
-        $action($payment);
-        $action($payment);
+        $action(
+            payment: $payment,
+            stripePaymentIntentId: 'pi_test_completed',
+        );
+        $action(
+            payment: $payment,
+            stripePaymentIntentId: 'pi_test_completed',
+        );
 
         $this->assertDatabaseCount('meeting_quota_transactions', 1);
 

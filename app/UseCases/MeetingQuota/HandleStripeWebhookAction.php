@@ -60,6 +60,15 @@ final class HandleStripeWebhookAction
             return;
         }
 
-        ($this->completePaymentAction)($payment);
+        $stripePaymentIntentId = $session->payment_intent;
+
+        if (! is_string($stripePaymentIntentId) || $stripePaymentIntentId === '') {
+            return;
+        }
+
+        ($this->completePaymentAction)(
+            $payment,
+            $stripePaymentIntentId,
+        );
     }
 }
