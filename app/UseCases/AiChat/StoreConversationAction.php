@@ -39,7 +39,7 @@ final class StoreConversationAction
                 'user_id' => $user->id,
                 'enrollment_id' => $enrollment->id,
                 'section_id' => $section->id,
-                'title' => '新規相談',
+                'title' => $section->title,
                 'auto_title_enabled' => true,
             ]);
         }
