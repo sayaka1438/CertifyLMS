@@ -7,15 +7,17 @@ namespace App\Enums;
 enum PaymentStatus: string
 {
     case Pending = 'pending';
-    case Completed = 'completed';
+    case Succeeded = 'succeeded';
     case Failed = 'failed';
+    case Refunded = 'refunded';
 
     public function label(): string
     {
         return match ($this) {
-            self::Pending => '保留',
-            self::Completed => '完了',
+            self::Pending => '処理中',
+            self::Succeeded => '完了',
             self::Failed => '失敗',
+            self::Refunded => '返金',
         };
     }
 }

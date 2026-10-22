@@ -54,26 +54,38 @@ class PaymentSeeder extends Seeder
             return;
         }
 
-        $completedPack = $meetingPacks->get(0);
+        $succeededPack = $meetingPacks->get(0);
         $pendingPack = $meetingPacks->get(1);
         $failedPack = $meetingPacks->get(2);
 
-        $completedPayment = Payment::create([
+        $succeededPayment = Payment::create([
             'user_id' => $fixedStudent->id,
-            'meeting_pack_id' => $completedPack->id,
-            'quantity' => $completedPack->meeting_count,
-            'amount' => $completedPack->price,
-            'status' => PaymentStatus::Completed->value,
-            'stripe_checkout_session_id' => 'cs_seed_completed',
-            'completed_at' => now()->subDays(3),
+            'meeting_pack_id' => $succeededPack->id,
+            'quantity' => $succeededPack->meeting_count,
+            'amount' => $succeededPack->price,
+            'status' => PaymentStatus::Succeeded->value,
+            'stripe_payment_intent_id' => 'pi_seed_succeeded',
+            'stripe_checkout_session_id' => 'cs_seed_succeeded',
+            'paid_at' => now()->subDays(3),
         ]);
 
         MeetingQuotaTransaction::create([
             'user_id' => $fixedStudent->id,
             'type' => MeetingQuotaTransactionType::Purchased->value,
-            'amount' => $completedPayment->quantity,
-            'related_payment_id' => $completedPayment->id,
-            'occurred_at' => $completedPayment->completed_at,
+            'amount' => $succeededPayment->quantity,
+            'related_payment_id' => $succeededPayment->id,
+            'occurred_at' => $succeededPayment->paid_at,
+        ]);
+
+        Payment::create([
+            'user_id' => $fixedStudent->id,
+            'meeting_pack_id' => $succeededPack->id,
+            'quantity' => $succeededPack->meeting_count,
+            'amount' => $succeededPack->price,
+            'status' => PaymentStatus::Refunded->value,
+            'stripe_payment_intent_id' => 'pi_seed_refunded',
+            'stripe_checkout_session_id' => 'cs_seed_refunded',
+            'paid_at' => now()->subDays(5),
         ]);
 
         Payment::create([
@@ -83,7 +95,7 @@ class PaymentSeeder extends Seeder
             'amount' => $pendingPack->price,
             'status' => PaymentStatus::Pending->value,
             'stripe_checkout_session_id' => 'cs_seed_pending',
-            'completed_at' => null,
+            'paid_at' => null,
         ]);
 
         Payment::create([
@@ -93,7 +105,7 @@ class PaymentSeeder extends Seeder
             'amount' => $failedPack->price,
             'status' => PaymentStatus::Failed->value,
             'stripe_checkout_session_id' => 'cs_seed_failed',
-            'completed_at' => null,
+            'paid_at' => null,
         ]);
     }
 }

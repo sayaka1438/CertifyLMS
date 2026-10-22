@@ -49,18 +49,29 @@ class PaymentTest extends TestCase
         $this->assertSame(PaymentStatus::Pending, $fresh->status);
     }
 
-    public function test_quantity_amount_and_completed_at_casts(): void
+    public function test_quantity_amount_and_paid_at_casts(): void
     {
-        $payment = Payment::factory()->completed()->create([
+        $payment = Payment::factory()->succeeded()->create([
             'quantity' => 5,
             'amount' => 12000,
-            'completed_at' => '2026-10-20 10:00:00',
+            'paid_at' => '2026-10-20 10:00:00',
         ]);
 
         $fresh = $payment->fresh();
 
         $this->assertIsInt($fresh->quantity);
         $this->assertIsInt($fresh->amount);
-        $this->assertInstanceOf(Carbon::class, $fresh->completed_at);
+        $this->assertInstanceOf(Carbon::class, $fresh->paid_at);
+    }
+
+    public function test_payment_uses_soft_deletes(): void
+    {
+        $payment = Payment::factory()->create();
+
+        $payment->delete();
+
+        $this->assertSoftDeleted('payments', [
+            'id' => $payment->id,
+        ]);
     }
 }
