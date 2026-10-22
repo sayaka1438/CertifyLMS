@@ -139,7 +139,7 @@ class AiChatControllerTest extends TestCase
             'user_id' => $student->id,
             'enrollment_id' => $enrollment->id,
             'section_id' => $section->id,
-            'title' => '新規相談',
+            'title' => $section->title,
         ]);
     }
 

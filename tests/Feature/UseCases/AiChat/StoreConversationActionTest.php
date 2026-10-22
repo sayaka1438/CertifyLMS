@@ -102,7 +102,7 @@ class StoreConversationActionTest extends TestCase
         $this->assertSame($student->id, $conversation->user_id);
         $this->assertSame($enrollment->id, $conversation->enrollment_id);
         $this->assertSame($section->id, $conversation->section_id);
-        $this->assertSame('新規相談', $conversation->title);
+        $this->assertSame($section->title, $conversation->title);
         $this->assertTrue($conversation->auto_title_enabled);
 
         $this->assertDatabaseHas('ai_chat_conversations', [
@@ -110,7 +110,7 @@ class StoreConversationActionTest extends TestCase
             'user_id' => $student->id,
             'enrollment_id' => $enrollment->id,
             'section_id' => $section->id,
-            'title' => '新規相談',
+            'title' => $section->title,
         ]);
     }
 
