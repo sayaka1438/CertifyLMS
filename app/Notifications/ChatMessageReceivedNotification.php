@@ -10,7 +10,9 @@ use Illuminate\Notifications\Notification;
 
 class ChatMessageReceivedNotification extends Notification
 {
-    public function __construct(public readonly ChatMessage $message) {}
+    public function __construct(
+        public readonly ChatMessage $message,
+    ) {}
 
     /**
      * @return array<int, string>
@@ -23,8 +25,8 @@ class ChatMessageReceivedNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('新しいチャットメッセージが届きました')
-            ->greeting('Certify LMS をご利用の皆様へ')
+            ->subject("【Certify LMS】{$this->message->sender->name}さんから新しいチャットメッセージが届きました")
+            ->greeting('お世話になっております。')
             ->line("{$this->message->sender->name}さんからメッセージが届きました。")
             ->line($this->message->body)
             ->action('チャットを確認する', route('chat.show', $this->message->chatRoom))
@@ -37,7 +39,7 @@ class ChatMessageReceivedNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => '新しいチャットメッセージが届きました',
+            'title' => "{$this->message->sender->name}さんから新しいチャットメッセージが届きました",
             'message' => "{$this->message->sender->name}さんから「{$this->message->body}」",
             'notification_type' => 'chat_message_received',
             'url' => route('chat.show', $this->message->chatRoom),

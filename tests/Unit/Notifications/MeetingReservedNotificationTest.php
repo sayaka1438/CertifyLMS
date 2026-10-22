@@ -41,7 +41,7 @@ class MeetingReservedNotificationTest extends TestCase
 
         $this->assertSame(
             [
-                'title' => '面談が予約されました',
+                'title' => "{$meeting->student->name}さんから面談が予約されました",
                 'message' => '2026年10月10日 14:00の面談が予約されました。',
                 'notification_type' => 'meeting_reserved',
                 'url' => route('meetings.show', $meeting),
@@ -63,12 +63,12 @@ class MeetingReservedNotificationTest extends TestCase
         $mail = $notification->toMail($coach);
 
         $this->assertSame(
-            '面談が予約されました',
+            "【Certify LMS】{$meeting->student->name}さんから面談が予約されました",
             $mail->subject,
         );
 
         $this->assertSame(
-            'Certify LMS をご利用の皆様へ',
+            'お世話になっております。',
             $mail->greeting,
         );
 

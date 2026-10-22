@@ -29,8 +29,11 @@ class MeetingCanceledNotificationTest extends TestCase
 
     public function test_returns_notification_data(): void
     {
+        $student = User::factory()->student()->create();
+
         $meeting = Meeting::factory()->create([
             'scheduled_at' => '2026-10-10 14:00:00',
+            'canceled_by_user_id' => $student->id,
         ]);
 
         $coach = User::factory()->coach()->create();
@@ -41,7 +44,7 @@ class MeetingCanceledNotificationTest extends TestCase
 
         $this->assertSame(
             [
-                'title' => '面談がキャンセルされました。',
+                'title' => "{$student->name}さんから面談がキャンセルされました",
                 'message' => '2026年10月10日 14:00の面談がキャンセルされました。',
                 'notification_type' => 'meeting_canceled',
                 'url' => route('meetings.show', $meeting),
@@ -52,8 +55,11 @@ class MeetingCanceledNotificationTest extends TestCase
 
     public function test_returns_mail_message(): void
     {
+        $student = User::factory()->student()->create();
+
         $meeting = Meeting::factory()->create([
             'scheduled_at' => '2026-10-10 14:00:00',
+            'canceled_by_user_id' => $student->id,
         ]);
 
         $coach = User::factory()->coach()->create();
@@ -63,12 +69,12 @@ class MeetingCanceledNotificationTest extends TestCase
         $mail = $notification->toMail($coach);
 
         $this->assertSame(
-            '面談がキャンセルされました。',
+            "【Certify LMS】{$student->name}さんから面談がキャンセルされました",
             $mail->subject,
         );
 
         $this->assertSame(
-            'Certify LMS をご利用の皆様へ',
+            'お世話になっております。',
             $mail->greeting,
         );
 

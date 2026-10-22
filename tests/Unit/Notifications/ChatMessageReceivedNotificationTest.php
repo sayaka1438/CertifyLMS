@@ -44,7 +44,7 @@ class ChatMessageReceivedNotificationTest extends TestCase
 
         $this->assertSame(
             [
-                'title' => '新しいチャットメッセージが届きました',
+                'title' => "{$sender->name}さんから新しいチャットメッセージが届きました",
                 'message' => "{$sender->name}さんから「チャットメッセージです。」",
                 'notification_type' => 'chat_message_received',
                 'url' => route('chat.show', $message->chatRoom),
@@ -69,12 +69,12 @@ class ChatMessageReceivedNotificationTest extends TestCase
         $mail = $notification->toMail($student);
 
         $this->assertSame(
-            '新しいチャットメッセージが届きました',
+            "【Certify LMS】{$sender->name}さんから新しいチャットメッセージが届きました",
             $mail->subject,
         );
 
         $this->assertSame(
-            'Certify LMS をご利用の皆様へ',
+            'お世話になっております。',
             $mail->greeting,
         );
 
