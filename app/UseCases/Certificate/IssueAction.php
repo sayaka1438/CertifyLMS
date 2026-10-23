@@ -6,6 +6,7 @@ namespace App\UseCases\Certificate;
 
 use App\Enums\EnrollmentStatus;
 use App\Exceptions\Certification\CertificateAlreadyIssuedException;
+use App\Exceptions\Certification\CertificatePdfGenerationException;
 use App\Exceptions\Certification\EnrollmentNotPassedException;
 use App\Models\Certificate;
 use App\Models\Enrollment;
@@ -19,13 +20,18 @@ use Illuminate\Support\Str;
  * - Enrollment が `status=passed` + `passed_at != null` でない: EnrollmentNotPassedException（409）
  * - 同一 Enrollment に対する二重呼出: CertificateAlreadyIssuedException（409、事前 lockForUpdate + exists で検出）
  *
- * 修了証レコードの INSERT は `DB::transaction()` 内で実行する。
+ * 修了証レコードの作成と PDF の生成・保存を `DB::transaction()` 内で実行し、PDF の生成・保存に失敗した場合は修了証レコードをロールバックする。
  */
 final class IssueAction
 {
+    public function __construct(
+        private readonly GeneratePdfAction $generatePdf,
+    ) {}
+
     /**
      * @throws EnrollmentNotPassedException 受講登録が修了状態ではない
      * @throws CertificateAlreadyIssuedException 同一 Enrollment で修了証が既発行
+     * @throws CertificatePdfGenerationException PDF の生成・保存に失敗
      */
     public function __invoke(Enrollment $enrollment): Certificate
     {
@@ -44,13 +50,17 @@ final class IssueAction
                 throw new CertificateAlreadyIssuedException;
             }
 
-            return Certificate::create([
+            $certificate = Certificate::create([
                 'user_id' => $enrollment->user_id,
                 'enrollment_id' => $enrollment->id,
                 'certification_id' => $enrollment->certification_id,
                 'pdf_path' => 'certificates/'.Str::ulid().'.pdf',
                 'issued_at' => now(),
             ]);
+
+            ($this->generatePdf)($certificate);
+
+            return $certificate;
         });
     }
 }

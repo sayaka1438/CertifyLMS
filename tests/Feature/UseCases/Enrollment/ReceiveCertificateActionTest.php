@@ -12,8 +12,11 @@ use App\Models\Enrollment;
 use App\Models\MockExam;
 use App\Models\MockExamSession;
 use App\Models\User;
+use App\UseCases\Certificate\GeneratePdfAction;
 use App\UseCases\Enrollment\ReceiveCertificateAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 /**
@@ -26,6 +29,8 @@ class ReceiveCertificateActionTest extends TestCase
 
     public function test_successfully_issues_certificate_and_records_status_log_when_all_published_exams_passed(): void
     {
+        Storage::fake('private');
+
         $student = User::factory()->student()->inProgress()->create();
         $certification = Certification::factory()->published()->create();
         $enrollment = Enrollment::factory()->for($student)->for($certification)->learning()->create();
@@ -47,6 +52,44 @@ class ReceiveCertificateActionTest extends TestCase
             'to_status' => EnrollmentStatus::Passed->value,
             'changed_by_user_id' => $student->id,
             'changed_reason' => '受講生による修了証受領',
+        ]);
+    }
+
+    public function test_rolls_back_certificate_issuance_when_pdf_generation_fails(): void
+    {
+        $student = User::factory()->student()->inProgress()->create();
+        $certification = Certification::factory()->published()->create();
+        $enrollment = Enrollment::factory()->for($student)->for($certification)->learning()->create();
+        $exam = MockExam::factory()->for($certification)->create(['is_published' => true]);
+        MockExamSession::factory()->for($enrollment)->for($exam)->create(['pass' => true]);
+
+        $generatePdf = Mockery::mock(GeneratePdfAction::class);
+        $generatePdf
+            ->shouldReceive('__invoke')
+            ->once()
+            ->andThrow(new \RuntimeException('PDF generation failed'));
+
+        $this->app->instance(GeneratePdfAction::class, $generatePdf);
+
+        try {
+            app(ReceiveCertificateAction::class)($enrollment);
+            $this->fail('RuntimeException が throw されるはず');
+        } catch (\RuntimeException) {
+            // PDF 生成失敗による例外は期待通り
+        }
+
+        $this->assertSame(
+            EnrollmentStatus::Learning,
+            $enrollment->refresh()->status,
+        );
+
+        $this->assertNull($enrollment->passed_at);
+
+        $this->assertDatabaseCount('certificates', 0);
+
+        $this->assertDatabaseMissing('enrollment_status_logs', [
+            'enrollment_id' => $enrollment->id,
+            'to_status' => EnrollmentStatus::Passed->value,
         ]);
     }
 
