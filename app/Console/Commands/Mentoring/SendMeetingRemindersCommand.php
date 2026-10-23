@@ -43,7 +43,7 @@ class SendMeetingRemindersCommand extends Command
             MeetingReminderWindow::OneHourBefore => $now->copy()->addHour(),
         };
 
-        $targetFrom = $targetAt->copy()->subMinute();
+        $targetFrom = $targetAt->copy()->subMinutes(5);
         $count = 0;
         $failedCount = 0;
 

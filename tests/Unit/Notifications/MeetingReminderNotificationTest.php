@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Notifications;
 
 use App\Enums\MeetingReminderWindow;
+use App\Models\Certification;
+use App\Models\Enrollment;
 use App\Models\Meeting;
 use App\Models\User;
 use App\Notifications\MeetingReminderNotification;
@@ -48,7 +50,7 @@ class MeetingReminderNotificationTest extends TestCase
 
         $this->assertSame(
             [
-                'title' => '明日は面談があります。',
+                'title' => '前日リマインド',
                 'message' => '2026年10月10日 14:00から面談が予定されています。',
                 'notification_type' => 'meeting_reminder_eve',
                 'meeting_id' => $meeting->id,
@@ -75,7 +77,7 @@ class MeetingReminderNotificationTest extends TestCase
 
         $this->assertSame(
             [
-                'title' => '1時間後に面談があります。',
+                'title' => '1時間前リマインド',
                 'message' => '2026年10月10日 14:00から面談が予定されています。',
                 'notification_type' => 'meeting_reminder_one_hour_before',
                 'meeting_id' => $meeting->id,
@@ -87,9 +89,20 @@ class MeetingReminderNotificationTest extends TestCase
 
     public function test_returns_eve_mail_message(): void
     {
-        $meeting = Meeting::factory()->create([
-            'scheduled_at' => '2026-10-10 14:00:00',
+        $certification = Certification::factory()->published()->create([
+            'name' => '基本情報技術者試験',
         ]);
+
+        $enrollment = Enrollment::factory()->create([
+            'certification_id' => $certification->id,
+        ]);
+
+        $meeting = Meeting::factory()
+            ->forEnrollment($enrollment)
+            ->create([
+                'scheduled_at' => '2026-10-10 14:00:00',
+                'topic' => '学習方法について相談したい',
+            ]);
 
         $student = User::factory()->student()->create();
 
@@ -101,13 +114,22 @@ class MeetingReminderNotificationTest extends TestCase
         $mail = $notification->toMail($student);
 
         $this->assertSame(
-            '【Certify LMS】明日は面談があります。',
+            '【Certify LMS】前日リマインド',
             $mail->subject,
         );
 
         $this->assertSame(
-            'Certify LMS をご利用の皆様へ',
+            'お世話になっております。',
             $mail->greeting,
+        );
+
+        $this->assertSame(
+            [
+                '日時：2026年10月10日 14:00',
+                '資格：基本情報技術者試験',
+                '相談内容：学習方法について相談したい',
+            ],
+            $mail->introLines,
         );
 
         $this->assertSame(
@@ -128,9 +150,20 @@ class MeetingReminderNotificationTest extends TestCase
 
     public function test_returns_one_hour_before_mail_message(): void
     {
-        $meeting = Meeting::factory()->create([
-            'scheduled_at' => '2026-10-10 14:00:00',
+        $certification = Certification::factory()->published()->create([
+            'name' => '基本情報技術者試験',
         ]);
+
+        $enrollment = Enrollment::factory()->create([
+            'certification_id' => $certification->id,
+        ]);
+
+        $meeting = Meeting::factory()
+            ->forEnrollment($enrollment)
+            ->create([
+                'scheduled_at' => '2026-10-10 14:00:00',
+                'topic' => '学習方法について相談したい',
+            ]);
 
         $student = User::factory()->student()->create();
 
@@ -142,13 +175,22 @@ class MeetingReminderNotificationTest extends TestCase
         $mail = $notification->toMail($student);
 
         $this->assertSame(
-            '【Certify LMS】1時間後に面談があります。',
+            '【Certify LMS】1時間前リマインド',
             $mail->subject,
         );
 
         $this->assertSame(
-            'Certify LMS をご利用の皆様へ',
+            'お世話になっております。',
             $mail->greeting,
+        );
+
+        $this->assertSame(
+            [
+                '日時：2026年10月10日 14:00',
+                '資格：基本情報技術者試験',
+                '相談内容：学習方法について相談したい',
+            ],
+            $mail->introLines,
         );
 
         $this->assertSame(

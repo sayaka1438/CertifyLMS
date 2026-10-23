@@ -179,4 +179,44 @@ class SendMeetingRemindersCommandTest extends TestCase
             },
         );
     }
+
+    public function test_command_sends_reminder_to_meeting_within_five_minute_window(): void
+    {
+        Notification::fake();
+
+        Carbon::setTestNow(Carbon::parse('2026-10-13 10:00:00'));
+
+        $student = User::factory()->student()->inProgress()->create();
+        $coach = User::factory()->coach()->inProgress()->create();
+
+        $meeting = Meeting::factory()
+            ->reserved()
+            ->forCoach($coach)
+            ->forStudent($student)
+            ->create([
+                'scheduled_at' => now()->addDay()->subMinutes(4),
+            ]);
+
+        $this->artisan('notifications:send-meeting-reminders', [
+            '--window' => MeetingReminderWindow::Eve->value,
+        ])->assertExitCode(0);
+
+        Notification::assertSentTo(
+            $student,
+            MeetingReminderNotification::class,
+            function (MeetingReminderNotification $notification) use ($meeting): bool {
+                return $notification->meeting->is($meeting)
+                    && $notification->window === MeetingReminderWindow::Eve;
+            },
+        );
+
+        Notification::assertSentTo(
+            $coach,
+            MeetingReminderNotification::class,
+            function (MeetingReminderNotification $notification) use ($meeting): bool {
+                return $notification->meeting->is($meeting)
+                    && $notification->window === MeetingReminderWindow::Eve;
+            },
+        );
+    }
 }
