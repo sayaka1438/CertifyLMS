@@ -71,4 +71,45 @@ class AnnouncementTest extends TestCase
         $this->assertSame(5, $fresh->dispatched_count);
         $this->assertInstanceOf(Carbon::class, $fresh->dispatched_at);
     }
+
+    public function test_deletes_announcement_when_target_certification_is_deleted(): void
+    {
+        $certification = Certification::factory()->create();
+        $announcement = Announcement::factory()->forCertification($certification)->create();
+
+        $certification->delete();
+
+        $this->assertDatabaseMissing('announcements', [
+            'id' => $announcement->id,
+        ]);
+    }
+
+    public function test_deletes_announcement_when_target_user_is_force_deleted(): void
+    {
+        $student = User::factory()->student()->create();
+        $announcement = Announcement::factory()->forUser($student)->create();
+
+        $student->forceDelete();
+
+        $this->assertDatabaseMissing('announcements', [
+            'id' => $announcement->id,
+        ]);
+    }
+
+    public function test_keeps_announcement_when_target_user_is_soft_deleted(): void
+    {
+        $student = User::factory()->student()->create();
+        $announcement = Announcement::factory()->forUser($student)->create();
+
+        $student->delete();
+
+        $this->assertSoftDeleted('users', [
+            'id' => $student->id,
+        ]);
+
+        $this->assertDatabaseHas('announcements', [
+            'id' => $announcement->id,
+            'target_user_id' => $student->id,
+        ]);
+    }
 }
