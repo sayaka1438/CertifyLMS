@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\UseCases\MeetingQuota;
 
 use App\Enums\PaymentStatus;
+use App\Models\MeetingQuotaTransaction;
 use App\Models\Payment;
 use App\Models\User;
 use App\UseCases\MeetingQuota\HandleStripeWebhookAction;
@@ -51,6 +52,54 @@ class HandleStripeWebhookActionTest extends TestCase
             'amount' => 5,
             'related_payment_id' => $payment->id,
         ]);
+    }
+
+    public function test_does_not_duplicate_purchase_when_same_event_is_received_twice(): void
+    {
+        $student = User::factory()->student()->create();
+
+        $payment = Payment::factory()->pending()->create([
+            'user_id' => $student->id,
+            'quantity' => 5,
+            'amount' => 12000,
+            'stripe_checkout_session_id' => 'cs_test_duplicate',
+        ]);
+
+        $event = $this->createEvent(
+            type: 'checkout.session.completed',
+            sessionId: 'cs_test_duplicate',
+            paymentId: $payment->id,
+            paymentStatus: 'paid',
+            currency: 'jpy',
+            amountTotal: 12000,
+            paymentIntentId: 'pi_test_duplicate',
+        );
+
+        $action = app(HandleStripeWebhookAction::class);
+
+        $action($event);
+        $action($event);
+
+        $payment->refresh();
+
+        $this->assertSame(
+            PaymentStatus::Succeeded,
+            $payment->status,
+        );
+
+        $this->assertDatabaseHas('meeting_quota_transactions', [
+            'user_id' => $student->id,
+            'type' => 'purchased',
+            'amount' => 5,
+            'related_payment_id' => $payment->id,
+        ]);
+
+        $this->assertSame(
+            1,
+            MeetingQuotaTransaction::query()
+                ->where('related_payment_id', $payment->id)
+                ->count(),
+        );
     }
 
     public function test_does_nothing_when_payment_status_is_not_paid(): void
