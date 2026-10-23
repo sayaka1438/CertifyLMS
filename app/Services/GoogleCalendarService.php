@@ -84,7 +84,7 @@ class GoogleCalendarService
         CarbonInterface $end,
     ): array {
         $client = $this->createAuthorizedClient($credential);
-        $calendar = new Calendar($client);
+        $calendar = $this->createCalendar($client);
 
         $item = new FreeBusyRequestItem;
         $item->setId($credential->calendar_id);
@@ -117,7 +117,7 @@ class GoogleCalendarService
         Meeting $meeting,
     ): string {
         $client = $this->createAuthorizedClient($credential);
-        $calendar = new Calendar($client);
+        $calendar = $this->createCalendar($client);
 
         $start = new EventDateTime;
         $start->setDateTime(
@@ -164,7 +164,7 @@ class GoogleCalendarService
         string $eventId,
     ): void {
         $client = $this->createAuthorizedClient($credential);
-        $calendar = new Calendar($client);
+        $calendar = $this->createCalendar($client);
 
         $calendar->events->delete(
             $credential->calendar_id,
@@ -223,7 +223,12 @@ class GoogleCalendarService
         $credential->refresh();
     }
 
-    private function createClient(): Client
+    protected function createCalendar(Client $client): Calendar
+    {
+        return new Calendar($client);
+    }
+
+    protected function createClient(): Client
     {
         $client = new Client;
 

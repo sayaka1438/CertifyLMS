@@ -6,10 +6,12 @@ namespace Tests\Unit\Services;
 
 use App\Services\StripeService;
 use Illuminate\Support\Facades\Config;
+use PHPUnit\Framework\Attributes\Group;
 use Stripe\Event;
 use Stripe\Exception\SignatureVerificationException;
 use Tests\TestCase;
 
+#[Group('external-api')]
 class StripeServiceTest extends TestCase
 {
     public function test_construct_webhook_event_returns_event_with_valid_signature(): void
@@ -30,13 +32,11 @@ class StripeServiceTest extends TestCase
 
         Config::set('services.stripe.webhook_secret', $secret);
 
-        $signature = hash_hmac(
-            'sha256',
-            $timestamp.'.'.$payload,
+        $signatureHeader = $this->generateStripeSignature(
+            $payload,
             $secret,
+            $timestamp,
         );
-
-        $signatureHeader = "t={$timestamp},v1={$signature}";
 
         $service = new StripeService;
 
@@ -74,5 +74,19 @@ class StripeServiceTest extends TestCase
             $payload,
             't=1234567890,v1=invalid_signature',
         );
+    }
+
+    private function generateStripeSignature(
+        string $payload,
+        string $secret,
+        int $timestamp,
+    ): string {
+        $signature = hash_hmac(
+            'sha256',
+            $timestamp.'.'.$payload,
+            $secret,
+        );
+
+        return "t={$timestamp},v1={$signature}";
     }
 }
