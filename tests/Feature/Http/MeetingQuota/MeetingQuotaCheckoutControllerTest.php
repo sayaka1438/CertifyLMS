@@ -79,14 +79,17 @@ class MeetingQuotaCheckoutControllerTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_checkout_page_shows_message_when_payment_is_canceled(): void
+    public function test_payment_cancel_redirects_to_dashboard_with_message(): void
     {
         $student = User::factory()->student()->inProgress()->create();
 
-        $response = $this->actingAs($student)->get(route('meeting-quota.checkout.select', ['canceled' => 1]));
+        $response = $this->actingAs($student)->get(route('meeting-quota.checkout.cancel'));
 
-        $response->assertOk();
-        $response->assertSessionHas('info', 'お支払いがキャンセルされました。');
+        $response->assertRedirect(route('dashboard.index'));
+        $response->assertSessionHas(
+            'info',
+            'お支払いがキャンセルされました。'
+        );
     }
 
     public function test_student_can_create_stripe_checkout_session_for_published_meeting_pack(): void
@@ -169,7 +172,7 @@ class MeetingQuotaCheckoutControllerTest extends TestCase
     {
         $student = User::factory()->student()->inProgress()->create();
 
-        $payment = Payment::factory()->for($student)->completed()->create();
+        $payment = Payment::factory()->for($student)->succeeded()->create();
 
         $response = $this->actingAs($student)->get(route('meeting-quota.success', [
             'payment_id' => $payment->id,
@@ -185,7 +188,7 @@ class MeetingQuotaCheckoutControllerTest extends TestCase
         $student = User::factory()->student()->inProgress()->create();
         $otherStudent = User::factory()->student()->inProgress()->create();
 
-        $payment = Payment::factory()->for($otherStudent)->completed()->create();
+        $payment = Payment::factory()->for($otherStudent)->succeeded()->create();
 
         $response = $this->actingAs($student)->get(route('meeting-quota.success', [
             'payment_id' => $payment->id,

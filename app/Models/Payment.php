@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Payment extends Model
 {
-    use HasFactory, HasUlids;
+    use HasFactory, HasUlids, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -20,15 +21,16 @@ class Payment extends Model
         'quantity',
         'amount',
         'status',
+        'stripe_payment_intent_id',
         'stripe_checkout_session_id',
-        'completed_at',
+        'paid_at',
     ];
 
     protected $casts = [
         'status' => PaymentStatus::class,
         'quantity' => 'integer',
         'amount' => 'integer',
-        'completed_at' => 'datetime',
+        'paid_at' => 'datetime',
     ];
 
     /**

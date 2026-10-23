@@ -16,16 +16,8 @@ use Illuminate\View\View;
 class MeetingQuotaCheckoutController extends Controller
 {
     public function select(
-        Request $request,
         SelectCheckoutAction $action
     ): View {
-        if ($request->query('canceled') === '1') {
-            session()->flash(
-                'info',
-                'お支払いがキャンセルされました。'
-            );
-        }
-
         $plans = $action();
 
         return view('meeting-quota.checkout-select', [
@@ -60,6 +52,16 @@ class MeetingQuotaCheckoutController extends Controller
                     '決済処理を開始できませんでした。時間をおいて再度お試しください。'
                 );
         }
+    }
+
+    public function cancel(): RedirectResponse
+    {
+        return redirect()
+            ->route('dashboard.index')
+            ->with(
+                'info',
+                'お支払いがキャンセルされました。'
+            );
     }
 
     public function success(

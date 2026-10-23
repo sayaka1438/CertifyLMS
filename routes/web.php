@@ -639,6 +639,8 @@ Route::middleware(['auth', 'role:student', 'active-learning'])->prefix('meeting-
         ->name('checkout.select');
     Route::post('checkout', [MeetingQuotaCheckoutController::class, 'store'])
         ->name('checkout.create');
+    Route::get('checkout/cancel', [MeetingQuotaCheckoutController::class, 'cancel'])
+        ->name('checkout.cancel');
     Route::get('success', [MeetingQuotaCheckoutController::class, 'success'])
         ->name('success');
 });

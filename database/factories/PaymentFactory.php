@@ -28,8 +28,9 @@ class PaymentFactory extends Factory
             'quantity' => $quantity,
             'amount' => $amount,
             'status' => PaymentStatus::Pending->value,
+            'stripe_payment_intent_id' => null,
             'stripe_checkout_session_id' => null,
-            'completed_at' => null,
+            'paid_at' => null,
         ];
     }
 
@@ -37,15 +38,15 @@ class PaymentFactory extends Factory
     {
         return $this->state(fn () => [
             'status' => PaymentStatus::Pending->value,
-            'completed_at' => null,
+            'paid_at' => null,
         ]);
     }
 
-    public function completed(): static
+    public function succeeded(): static
     {
         return $this->state(fn () => [
-            'status' => PaymentStatus::Completed->value,
-            'completed_at' => now(),
+            'status' => PaymentStatus::Succeeded->value,
+            'paid_at' => now(),
         ]);
     }
 
@@ -53,7 +54,7 @@ class PaymentFactory extends Factory
     {
         return $this->state(fn () => [
             'status' => PaymentStatus::Failed->value,
-            'completed_at' => null,
+            'paid_at' => null,
         ]);
     }
 }

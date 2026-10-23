@@ -12,14 +12,16 @@ use Illuminate\Support\Facades\DB;
 
 final class CompletePaymentAction
 {
-    public function __invoke(Payment $payment): void
-    {
-        DB::transaction(function () use ($payment) {
+    public function __invoke(
+        Payment $payment,
+        string $stripePaymentIntentId,
+    ): void {
+        DB::transaction(function () use ($payment, $stripePaymentIntentId) {
             $lockedPayment = Payment::query()
                 ->lockForUpdate()
                 ->findOrFail($payment->id);
 
-            if ($lockedPayment->status === PaymentStatus::Completed) {
+            if ($lockedPayment->status === PaymentStatus::Succeeded) {
                 return;
             }
 
@@ -32,8 +34,9 @@ final class CompletePaymentAction
             ]);
 
             $lockedPayment->update([
-                'status' => PaymentStatus::Completed->value,
-                'completed_at' => now(),
+                'status' => PaymentStatus::Succeeded->value,
+                'stripe_payment_intent_id' => $stripePaymentIntentId,
+                'paid_at' => now(),
             ]);
         });
     }
