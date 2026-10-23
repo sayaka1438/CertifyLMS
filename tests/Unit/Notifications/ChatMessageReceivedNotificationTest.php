@@ -7,6 +7,7 @@ namespace Tests\Unit\Notifications;
 use App\Models\ChatMessage;
 use App\Models\User;
 use App\Notifications\ChatMessageReceivedNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -92,5 +93,16 @@ class ChatMessageReceivedNotificationTest extends TestCase
             'Certify LMS 運営チーム',
             $mail->salutation,
         );
+    }
+
+    public function test_is_queued_with_retry_settings(): void
+    {
+        $message = ChatMessage::factory()->create();
+
+        $notification = new ChatMessageReceivedNotification($message);
+
+        $this->assertInstanceOf(ShouldQueue::class, $notification);
+        $this->assertSame(3, $notification->tries);
+        $this->assertSame([10, 30], $notification->backoff);
     }
 }

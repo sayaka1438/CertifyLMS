@@ -125,6 +125,36 @@ sail bin pint --dirty    # 変更ファイルのみ整形
 sail bin pint --test     # 整形漏れの確認（CI 相当のチェック）
 ```
 
+## キューワーカー
+
+通知・メール配信はデータベースキューを使用して非同期で処理します。
+
+ローカル環境では、Sail のコンテナ起動後に別ターミナルでキューワーカーを起動してください。
+
+```bash
+sail artisan queue:work
+```
+
+キュージョブは最大3回まで実行され、失敗時は10秒、30秒と段階的に待機して再試行します。上限まで失敗したジョブは `failed_jobs` テーブルに記録されます。
+
+失敗したジョブは次のコマンドで確認できます。
+
+```bash
+sail artisan queue:failed
+```
+
+失敗したジョブを再投入する場合は、対象の ID を指定して実行します。
+
+```bash
+sail artisan queue:retry <id>
+```
+
+すべての失敗ジョブを再投入する場合は、次のコマンドを実行します。
+
+```bash
+sail artisan queue:retry all
+```
+
 ## 使用技術
 
 - PHP 8.5 / Laravel 10

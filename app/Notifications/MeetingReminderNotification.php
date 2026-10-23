@@ -6,16 +6,29 @@ namespace App\Notifications;
 
 use App\Enums\MeetingReminderWindow;
 use App\Models\Meeting;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class MeetingReminderNotification extends Notification
+class MeetingReminderNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
+    /**
+     * @var int
+     */
+    public $tries = 3;
+
+    /**
+     * @var array<int, int>
+     */
+    public $backoff = [10, 30];
+
     public function __construct(
         public readonly Meeting $meeting,
         public readonly MeetingReminderWindow $window,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array<int, string>
@@ -32,7 +45,7 @@ class MeetingReminderNotification extends Notification
         $topic = $this->meeting->topic;
 
         $mail = (new MailMessage)
-            ->subject('【Certify LMS】' . $this->title())
+            ->subject('【Certify LMS】'.$this->title())
             ->greeting('お世話になっております。')
             ->line("日時：{$scheduledAt}")
             ->line("資格：{$certificationName}")
@@ -51,7 +64,7 @@ class MeetingReminderNotification extends Notification
         return [
             'title' => $this->title(),
             'message' => $this->message(),
-            'notification_type' => 'meeting_reminder_' . $this->window->value,
+            'notification_type' => 'meeting_reminder_'.$this->window->value,
             'meeting_id' => $this->meeting->id,
             'url' => route('meetings.show', $this->meeting),
         ];

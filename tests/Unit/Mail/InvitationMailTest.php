@@ -98,5 +98,8 @@ class InvitationMailTest extends TestCase
             $mailable,
             '招待メールは ShouldQueue 実装で非同期キュー送信されるはず (送信遅延がユーザー体感に影響しないように)',
         );
+
+        $this->assertSame(3, $mailable->tries);
+        $this->assertSame([10, 30], $mailable->backoff);
     }
 }

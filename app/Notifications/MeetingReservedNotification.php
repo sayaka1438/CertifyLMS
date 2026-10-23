@@ -5,11 +5,25 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\Meeting;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class MeetingReservedNotification extends Notification
+class MeetingReservedNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
+    /**
+     * @var int
+     */
+    public $tries = 3;
+
+    /**
+     * @var array<int, int>
+     */
+    public $backoff = [10, 30];
+
     public function __construct(public readonly Meeting $meeting) {}
 
     /**
