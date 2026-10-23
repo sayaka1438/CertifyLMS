@@ -14,24 +14,20 @@ use App\Models\Certification;
 use App\Models\Enrollment;
 use App\Models\EnrollmentStatusLog;
 use App\Models\User;
+use App\UseCases\Certificate\GeneratePdfAction;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * 卒業生向けの修了証 + 過去 Enrollment 補完シーダー。
  *
- * `EnrollmentSeeder::issueCertificate()` は in_progress 受講生の passed Enrollment に対し
- * 既に Certificate を発行している(動作確認用 demo)。本 Seeder はそれを残しつつ、
- * `UserSeeder` で生成される graduated 受講生 3 名に過去 Enrollment + Certificate を補完して
- * 「修了 → 卒業」フローの履歴を画面で見える状態にする。
+ * EnrollmentSeeder が作成する既存の修了証はそのまま残し、
+ * graduated 受講生 3 名に過去 Enrollment と Certificate を補完する。
  *
- * **設計思想(Seeder 業界標準: 状態補完)**:
+ * 修了証を割り当てる資格は名前で明示し、取得順に依存しない構成にする。
  *
- * 1. **graduated 受講生に過去 Enrollment + Certificate**: 各 graduated 受講生に 1 件の passed Enrollment を作り、
- *    Certificate を発行する。Certificate は永続データなので卒業後も DL 可能(プラン機能はロックされるが修了証 DL は可)。
- * 2. **EnrollmentStatusLog 同梱**: learning → passed の遷移ログを併せて INSERT し、状態遷移履歴が成立する状態にする。
- *
- * 依存順序: `UserSeeder` → `PlanSeeder` → `CertificationSeeder` → `EnrollmentSeeder` → 本 Seeder。
+ * 依存順序: UserSeeder → CertificationSeeder → EnrollmentSeeder → 本 Seeder。
  */
 final class CertificateSeeder extends Seeder
 {
@@ -49,35 +45,64 @@ final class CertificateSeeder extends Seeder
             return;
         }
 
-        $publishedCertifications = Certification::query()
+        $certificationNames = [
+            '基本情報技術者試験',
+            '日商簿記 2 級',
+            'TOEIC L&R 800 点コース',
+        ];
+
+        $certifications = Certification::query()
             ->where('status', CertificationStatus::Published->value)
-            ->orderBy('created_at')
-            ->get();
+            ->whereIn('name', $certificationNames)
+            ->get()
+            ->keyBy('name');
 
-        if ($publishedCertifications->isEmpty()) {
-            $this->command?->warn('CertificateSeeder: 公開済資格がありません。先に CertificationSeeder を実行してください。');
-
-            return;
+        foreach ($certificationNames as $name) {
+            if (! $certifications->has($name)) {
+                throw new RuntimeException(
+                    "CertificateSeeder: 公開済資格「{$name}」が見つかりません。",
+                );
+            }
         }
 
-        foreach ($graduatedStudents as $i => $student) {
-            $certification = $publishedCertifications->get($i % $publishedCertifications->count());
+        if ($graduatedStudents->count() < count($certificationNames)) {
+            throw new RuntimeException(
+                'CertificateSeeder: 修了証を割り当てる卒業済受講生が3名以上必要です。',
+            );
+        }
+
+        foreach ($certificationNames as $i => $name) {
+            $student = $graduatedStudents[$i];
+            $certification = $certifications->get($name);
+
             if ($certification === null) {
-                continue;
+                throw new RuntimeException(
+                    "CertificateSeeder: 資格「{$name}」を取得できません。",
+                );
             }
 
-            $enrollment = $this->createPastEnrollment($student, $certification, $i);
+            $enrollment = $this->createPastEnrollment(
+                $student,
+                $certification,
+                $i,
+            );
+
             $this->issueCertificateForEnrollment($enrollment);
         }
     }
 
     /**
-     * graduated 受講生に紐づく過去 Enrollment を作る(passed 状態、試験日も plan_expires_at の前)。
-     * EnrollmentStatusLog も併せて積む。
+     * graduated 受講生に紐づく過去 Enrollment を作る。
+     * passed 状態と試験日を設定し、EnrollmentStatusLog も記録する。
      */
-    private function createPastEnrollment(User $student, Certification $certification, int $orderIndex): Enrollment
-    {
-        $planExpiresAt = $student->plan_expires_at ?? now()->subDays(30 + $orderIndex * 15);
+    private function createPastEnrollment(
+        User $student,
+        Certification $certification,
+        int $orderIndex,
+    ): Enrollment {
+        $planExpiresAt = $student->plan_expires_at
+            ?? now()->subDays(30 + $orderIndex * 15);
+
         $examDate = $planExpiresAt->copy()->subDays(10)->toDateString();
         $passedAt = $planExpiresAt->copy()->subDays(7);
         $startedAt = $planExpiresAt->copy()->subDays(90);
@@ -93,7 +118,10 @@ final class CertificateSeeder extends Seeder
             ])
             ->create();
 
-        $enrollment->forceFill(['created_at' => $startedAt, 'updated_at' => $passedAt])->save();
+        $enrollment->forceFill([
+            'created_at' => $startedAt,
+            'updated_at' => $passedAt,
+        ])->save();
 
         EnrollmentStatusLog::factory()->for($enrollment)->create([
             'from_status' => null,
@@ -115,7 +143,7 @@ final class CertificateSeeder extends Seeder
     }
 
     /**
-     * Certificate を 1 件発行する。
+     * Certificate を発行し、PDF 実体も生成する。
      */
     private function issueCertificateForEnrollment(Enrollment $enrollment): void
     {
@@ -128,5 +156,7 @@ final class CertificateSeeder extends Seeder
                 'issued_at' => $issuedAt,
             ])
             ->create();
+
+        app(GeneratePdfAction::class)($certificate);
     }
 }
