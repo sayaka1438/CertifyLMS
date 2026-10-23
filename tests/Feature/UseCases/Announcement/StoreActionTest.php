@@ -53,9 +53,30 @@ class StoreActionTest extends TestCase
         Notification::fake();
 
         $admin = User::factory()->admin()->create();
+
         $student = User::factory()->student()->inProgress()->create();
+        $passedStudent = User::factory()->student()->inProgress()->create();
+        $failedStudent = User::factory()->student()->inProgress()->create();
+
         $certification = Certification::factory()->create();
-        Enrollment::factory()->for($student)->for($certification)->learning()->create();
+
+        Enrollment::factory()
+            ->for($student)
+            ->for($certification)
+            ->learning()
+            ->create();
+
+        Enrollment::factory()
+            ->for($passedStudent)
+            ->for($certification)
+            ->passed()
+            ->create();
+
+        Enrollment::factory()
+            ->for($failedStudent)
+            ->for($certification)
+            ->failed()
+            ->create();
 
         $data = [
             'title' => '資格指定のお知らせ',
@@ -76,6 +97,16 @@ class StoreActionTest extends TestCase
 
         Notification::assertSentTo(
             $student,
+            AdminAnnouncementNotification::class,
+        );
+
+        Notification::assertNotSentTo(
+            $passedStudent,
+            AdminAnnouncementNotification::class,
+        );
+
+        Notification::assertNotSentTo(
+            $failedStudent,
             AdminAnnouncementNotification::class,
         );
     }
@@ -173,5 +204,36 @@ class StoreActionTest extends TestCase
 
         $this->assertNull($announcement->target_certification_id);
         $this->assertNull($announcement->target_user_id);
+    }
+
+    public function test_stores_announcement_when_no_recipients_exist(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->admin()->create();
+        $certification = Certification::factory()->create();
+
+        $data = [
+            'title' => '配信対象0件のお知らせ',
+            'body' => '配信対象0件のお知らせ本文です。',
+            'target_type' => AnnouncementTargetType::Certification->value,
+            'target_certification_id' => $certification->id,
+        ];
+
+        $announcement = app(StoreAction::class)(
+            admin: $admin,
+            validated: $data,
+        );
+
+        $this->assertSame(0, $announcement->dispatched_count);
+
+        $this->assertDatabaseHas('announcements', [
+            'id' => $announcement->id,
+            'target_type' => AnnouncementTargetType::Certification->value,
+            'target_certification_id' => $certification->id,
+            'dispatched_count' => 0,
+        ]);
+
+        Notification::assertNothingSent();
     }
 }

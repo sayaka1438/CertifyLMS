@@ -61,7 +61,7 @@ class AnnouncementController extends Controller
 
         return redirect()
             ->route('admin.announcements.show', $announcement)
-            ->with('success', 'お知らせを配信しました。');
+            ->with('success', "お知らせを配信しました。（{$announcement->dispatched_count}件）");
     }
 
     public function show(Announcement $announcement, ShowAction $action): View

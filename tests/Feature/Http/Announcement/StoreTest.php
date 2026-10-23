@@ -33,7 +33,7 @@ class StoreTest extends TestCase
         $announcement = Announcement::where('title', $data['title'])->firstOrFail();
 
         $response->assertRedirect(route('admin.announcements.show', $announcement));
-        $response->assertSessionHas('success', 'お知らせを配信しました。');
+        $response->assertSessionHas('success', 'お知らせを配信しました。（1件）');
 
         $this->assertDatabaseHas('announcements', [
             'title' => $data['title'],

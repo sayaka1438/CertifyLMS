@@ -26,7 +26,7 @@ class AdminAnnouncementNotification extends Notification
     {
         return (new MailMessage)
             ->subject("【Certify LMS】{$this->announcement->title}")
-            ->greeting('お世話になっております。')
+            ->greeting('管理者からのお知らせ')
             ->line($this->announcement->body)
             ->action('お知らせを確認する', route('notifications.index'))
             ->salutation('Certify LMS 運営チーム');

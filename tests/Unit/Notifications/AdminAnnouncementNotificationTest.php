@@ -68,7 +68,7 @@ class AdminAnnouncementNotificationTest extends TestCase
         );
 
         $this->assertSame(
-            'お世話になっております。',
+            '管理者からのお知らせ',
             $mail->greeting,
         );
 
