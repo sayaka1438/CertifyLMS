@@ -6,11 +6,25 @@ namespace App\Notifications;
 
 use App\Models\QaThread;
 use App\Models\User;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class QaReplyReceivedNotification extends Notification
+class QaReplyReceivedNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
+    /**
+     * @var int
+     */
+    public $tries = 3;
+
+    /**
+     * @var array<int, int>
+     */
+    public $backoff = [10, 30];
+
     public function __construct(
         public readonly QaThread $thread,
         public readonly User $user,
