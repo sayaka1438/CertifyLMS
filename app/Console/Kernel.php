@@ -33,12 +33,12 @@ class Kernel extends ConsoleKernel
 
         // 予約済み面談の前日リマインダーを送信
         $schedule->command('notifications:send-meeting-reminders --window=eve')
-            ->everyMinute()
+            ->everyFiveMinutes()
             ->withoutOverlapping(5);
 
         // 予約済み面談の開始1時間前リマインダーを送信
         $schedule->command('notifications:send-meeting-reminders --window=one_hour_before')
-            ->everyMinute()
+            ->everyFiveMinutes()
             ->withoutOverlapping(5);
     }
 

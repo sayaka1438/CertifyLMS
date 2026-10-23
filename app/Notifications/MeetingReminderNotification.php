@@ -14,7 +14,8 @@ class MeetingReminderNotification extends Notification
     public function __construct(
         public readonly Meeting $meeting,
         public readonly MeetingReminderWindow $window,
-    ) {}
+    ) {
+    }
 
     /**
      * @return array<int, string>
@@ -26,11 +27,19 @@ class MeetingReminderNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('【Certify LMS】'.$this->title())
-            ->greeting('Certify LMS をご利用の皆様へ')
-            ->line($this->message())
-            ->action('面談を確認する', route('meetings.show', $this->meeting))
+        $scheduledAt = $this->meeting->scheduled_at->format('Y年m月d日 H:i');
+        $certificationName = $this->meeting->enrollment->certification->name;
+        $topic = $this->meeting->topic;
+
+        $mail = (new MailMessage)
+            ->subject('【Certify LMS】' . $this->title())
+            ->greeting('お世話になっております。')
+            ->line("日時：{$scheduledAt}")
+            ->line("資格：{$certificationName}")
+            ->line("相談内容：{$topic}")
+            ->action('面談を確認する', route('meetings.show', $this->meeting));
+
+        return $mail
             ->salutation('Certify LMS 運営チーム');
     }
 
@@ -42,7 +51,7 @@ class MeetingReminderNotification extends Notification
         return [
             'title' => $this->title(),
             'message' => $this->message(),
-            'notification_type' => 'meeting_reminder_'.$this->window->value,
+            'notification_type' => 'meeting_reminder_' . $this->window->value,
             'meeting_id' => $this->meeting->id,
             'url' => route('meetings.show', $this->meeting),
         ];
@@ -51,8 +60,8 @@ class MeetingReminderNotification extends Notification
     private function title(): string
     {
         return match ($this->window) {
-            MeetingReminderWindow::Eve => '明日は面談があります。',
-            MeetingReminderWindow::OneHourBefore => '1時間後に面談があります。',
+            MeetingReminderWindow::Eve => '前日リマインド',
+            MeetingReminderWindow::OneHourBefore => '1時間前リマインド',
         };
     }
 
